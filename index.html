@@ -116,6 +116,12 @@
   }
   .api-status .dot.on { background: #6bb86b; box-shadow: 0 0 6px rgba(107,184,107,0.4); }
   .api-status .dot.off { background: var(--muted); }
+  .reset-link {
+    font-size: 0.65rem; color: var(--muted); cursor: pointer;
+    text-decoration: underline; text-decoration-style: dotted;
+    transition: 0.2s;
+  }
+  .reset-link:hover { color: var(--green); }
 
   /* Main Layout */
   .main {
@@ -368,6 +374,7 @@
         <span class="dot off" id="statusDot"></span>
         <span id="statusText">No LLM key</span>
       </div>
+      <span class="reset-link" onclick="resetAndShowModal()">reset</span>
     </div>
   </div>
 </header>
@@ -938,6 +945,18 @@ function setApiKey() {
   document.getElementById('keyModal').style.display = 'none';
   updateApiStatus(true);
   addMessage('bot', '☕ Gemini connected! I have access to <strong>3 MCP tools</strong> with details on 35+ real Dublin cafes. Try: <em>"Find a cosy cafe in Dublin 2"</em> or <em>"Best brunch spots"</em>');
+}
+
+function resetAndShowModal() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  apiKey = '';
+  window.demoMode = false;
+  history = [];
+  chatMessages.innerHTML = '';
+  toolLog.innerHTML = '<div class="tl-item" style="color:var(--muted);font-size:0.6rem;justify-content:center;border:none;">No calls yet</div>';
+  updateApiStatus(false, 'No LLM key');
+  document.getElementById('engineLabel').textContent = 'Gemini 2.0 Flash';
+  document.getElementById('keyModal').style.display = 'flex';
 }
 
 function startDemo() {
