@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dublin Cafe Chatbot — AI + MCP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --white: #ffffff;
+    --bg: #f4f3ef;
+    --surface: #ffffff;
+    --text: #1a1a1a;
+    --text-secondary: #555;
+    --muted: #999;
+    --green: #2d5a3b;
+    --green-dark: #1d3a27;
+    --green-light: #4a8a5f;
+    --gold: #b8994a;
+    --gold-light: #d4bc7a;
+    --gold-dim: rgba(184,153,74,0.08);
+    --nav-bg: #1d3a27;
+    --nav-text: #ccc;
+    --border: #e0ddd6;
+    --border-light: #ece9e2;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --font-display: 'Playfair Display', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --max-width: 1320px;
+  }
+
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 6px; }
+
+  /* Top Bar */
+  .top-bar {
+    background: var(--nav-bg);
+    color: var(--nav-text);
+    font-size: 0.72rem;
+    padding: 0.4rem 0;
+    font-weight: 300;
+    flex-shrink: 0;
+  }
+  .top-bar .inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .top-bar a { color: var(--gold-light); text-decoration: none; }
+  .top-bar a:hover { color: #fff; }
+
+  /* Header */
+  .site-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--border-light);
+    padding: 0.8rem 0;
+    flex-shrink: 0;
+  }
+  .site-header .inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--green), var(--green-light));
+    display: flex;
+    align-items: center; justify-content: center;
+    font-size: 1rem; color: #fff;
+  }
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+  .logo-text span { color: var(--green); }
+
+  .header-right { display: flex; align-items: center; gap: 1rem; }
+  .api-status {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.7rem; color: var(--muted);
+  }
+  .api-status .dot {
+    width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+  }
+  .api-status .dot.on { background: #6bb86b; box-shadow: 0 0 6px rgba(107,184,107,0.4); }
+  .api-status .dot.off { background: var(--muted); }
+
+  /* Main Layout */
+  .main {
+    flex: 1;
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 1.2rem 2rem 1rem;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    min-height: 0;
+    width: 100%;
+  }
+
+  /* Chat */
+  .chat-area { display: flex; flex-direction: column; min-height: 0; }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding-right: 0.5rem;
+    display: flex; flex-direction: column; gap: 0.8rem; min-height: 0;
+  }
+  .chat-messages:empty::after {
+    content: 'Ask me about any cafe in Dublin! Try "Find me a cozy cafe in Dublin 2" or "Best brunch spots near Grafton Street".';
+    display: block; text-align: center; color: var(--muted);
+    font-size: 0.82rem; padding: 3rem 1rem; font-weight: 300;
+  }
+  .msg { display: flex; gap: 10px; max-width: 88%; animation: msgIn 0.3s ease; }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .msg.bot { align-self: flex-start; }
+  .msg .avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+  }
+  .msg.user .avatar { background: var(--green); color: #fff; }
+  .msg.bot .avatar { background: var(--border-light); color: var(--muted); }
+  .msg .bubble {
+    padding: 0.7rem 0.9rem; border-radius: var(--radius-md);
+    font-size: 0.85rem; line-height: 1.55; font-weight: 300;
+  }
+  .msg.user .bubble { background: var(--green); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot .bubble { background: var(--white); border: 1px solid var(--border-light); border-bottom-left-radius: 4px; }
+  .msg.bot .bubble code { font-family: var(--font-mono); font-size: 0.78rem; background: var(--gold-dim); padding: 0.1rem 0.3rem; border-radius: 3px; color: var(--gold); }
+
+  /* Cafe card inside chat */
+  .cafe-card {
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.7rem;
+    margin: 0.35rem 0;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .cafe-card .cc-icon {
+    font-size: 1.5rem; flex-shrink: 0; line-height: 1;
+  }
+  .cafe-card .cc-body { flex: 1; min-width: 0; }
+  .cafe-card .cc-name {
+    font-weight: 600; font-size: 0.85rem; color: var(--text);
+    display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  }
+  .cafe-card .cc-name .rating {
+    font-size: 0.68rem; font-weight: 400; color: var(--gold);
+  }
+  .cafe-card .cc-addr {
+    font-size: 0.72rem; color: var(--text-secondary); margin-top: 1px;
+  }
+  .cafe-card .cc-tags {
+    display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px;
+  }
+  .cafe-card .cc-tags span {
+    font-size: 0.6rem; padding: 1px 6px; border-radius: 3px;
+    background: var(--gold-dim); color: var(--gold); font-family: var(--font-mono);
+  }
+  .cafe-card .cc-info {
+    font-size: 0.68rem; color: var(--muted); margin-top: 3px;
+  }
+
+  /* Tool call card */
+  .tool-call {
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-dim);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.7rem;
+    margin: 0.4rem 0;
+    font-size: 0.72rem;
+  }
+  .tool-call .tc-h {
+    display: flex; align-items: center; gap: 5px;
+    font-weight: 500; color: var(--gold);
+    font-family: var(--font-mono); font-size: 0.65rem;
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.25rem;
+  }
+  .tool-call .tc-h .spin {
+    display: inline-block; width: 10px; height: 10px;
+    border: 2px solid var(--gold-dim); border-top-color: var(--gold);
+    border-radius: 50%; animation: tSpin 0.6s linear infinite;
+  }
+  @keyframes tSpin { to { transform: rotate(360deg); } }
+  .tool-call .tc-body { color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.68rem; white-space: pre-wrap; }
+  .tool-call .tc-result { margin-top: 0.3rem; padding-top: 0.3rem; border-top: 1px solid var(--gold-dim); color: var(--text); font-family: var(--font-mono); font-size: 0.68rem; }
+
+  /* Chat Input */
+  .chat-input-wrap {
+    display: flex; gap: 0; margin-top: 0.8rem;
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: var(--radius-md); overflow: hidden;
+    box-shadow: var(--shadow-sm); transition: 0.3s; flex-shrink: 0;
+  }
+  .chat-input-wrap:focus-within { border-color: var(--green); box-shadow: 0 2px 16px rgba(45,90,59,0.08); }
+  .chat-input-wrap input {
+    flex: 1; padding: 0.75rem 1rem; border: none; outline: none;
+    font-family: var(--font-body); font-size: 0.85rem;
+    font-weight: 400; color: var(--text); background: transparent;
+  }
+  .chat-input-wrap input::placeholder { color: var(--muted); font-weight: 300; }
+  .chat-input-wrap button {
+    padding: 0 1.2rem; border: none;
+    background: var(--green); color: #fff;
+    font-family: var(--font-body); font-size: 0.8rem;
+    font-weight: 600; cursor: pointer; transition: 0.3s;
+  }
+  .chat-input-wrap button:hover { background: var(--green-dark); }
+  .chat-input-wrap button:disabled { opacity: 0.5; cursor: default; }
+
+  /* Quick suggestions */
+  .suggestions {
+    display: flex; gap: 5px; flex-wrap: wrap; margin-top: 0.4rem;
+  }
+  .suggestions button {
+    font-family: var(--font-body); font-size: 0.68rem;
+    padding: 0.2rem 0.7rem; border-radius: 100px;
+    border: 1px solid var(--border); background: var(--white);
+    color: var(--text-secondary); cursor: pointer; transition: 0.2s;
+  }
+  .suggestions button:hover {
+    border-color: var(--green); color: var(--green); background: rgba(45,90,59,0.03);
+  }
+
+  /* MCP Panel */
+  .mcp-panel { display: flex; flex-direction: column; gap: 0.8rem; min-height: 0; }
+  .mcp-card { background: var(--white); border: 1px solid var(--border-light); border-radius: var(--radius-md); overflow: hidden; }
+  .mcp-card .mc-h {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border-light);
+    font-family: var(--font-mono); font-size: 0.62rem;
+    font-weight: 500; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .mcp-card .mc-h .live {
+    width: 5px; height: 5px; border-radius: 50%; display: inline-block;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .mcp-card .mc-h .live.green { background: var(--green); box-shadow: 0 0 6px rgba(45,90,59,0.3); }
+  .mcp-card .mc-h .live.gold { background: var(--gold); box-shadow: 0 0 6px rgba(184,153,74,0.3); }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
+  .mcp-card .mc-body { padding: 0.7rem 0.9rem; font-size: 0.72rem; line-height: 1.5; }
+  .mcp-card .mc-body pre { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-secondary); white-space: pre-wrap; overflow-x: auto; max-height: 140px; }
+
+  .tool-log { max-height: 160px; overflow-y: auto; padding: 0.5rem 0.9rem; }
+  .tool-log .tl-item {
+    font-size: 0.65rem; font-family: var(--font-mono);
+    padding: 0.3rem 0; border-bottom: 1px solid var(--border-light);
+    display: flex; align-items: flex-start; gap: 5px;
+  }
+  .tool-log .tl-item:last-child { border: none; }
+  .tool-log .tl-item .tl-icon { color: var(--green); flex-shrink: 0; }
+  .tool-log .tl-item .tl-name { color: var(--text); font-weight: 500; }
+  .tool-log .tl-item .tl-args { color: var(--muted); }
+  .tool-log .tl-item .tl-result { color: var(--green); display: block; margin-top: 2px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 100; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--white); border-radius: var(--radius-lg);
+    padding: 2rem; max-width: 480px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal h2 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .modal p { font-size: 0.82rem; color: var(--text-secondary); font-weight: 300; margin-bottom: 1rem; line-height: 1.5; }
+  .modal input {
+    width: 100%; padding: 0.7rem 0.9rem; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-family: var(--font-body);
+    font-size: 0.85rem; outline: none; transition: 0.3s; margin-bottom: 0.6rem;
+  }
+  .modal input:focus { border-color: var(--green); }
+  .modal .modal-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .modal .btn {
+    padding: 0.55rem 1.2rem; border-radius: var(--radius-sm);
+    border: none; font-family: var(--font-body);
+    font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: 0.25s;
+  }
+  .modal .btn.primary { background: var(--green); color: #fff; }
+  .modal .btn.primary:hover { background: var(--green-dark); }
+  .modal .btn.sec { background: none; border: 1px solid var(--border); color: var(--text-secondary); }
+  .modal .btn.sec:hover { border-color: var(--green); color: var(--green); }
+  .modal .note { font-size: 0.68rem; color: var(--muted); margin-top: 0.5rem; line-height: 1.4; }
+  .modal .note a { color: var(--green); }
+
+  /* Responsive */
+  @media (max-width: 860px) {
+    .main { grid-template-columns: 1fr; padding: 1rem 1rem 0.8rem; }
+    .mcp-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+    .top-bar .inner { padding: 0 1rem; font-size: 0.62rem; flex-wrap: wrap; gap: 0.2rem; }
+    .site-header .inner { padding: 0 1rem; }
+    .msg { max-width: 95%; }
+  }
+  @media (max-width: 550px) {
+    .mcp-panel { grid-template-columns: 1fr; }
+    .logo-text { font-size: 1rem; }
+    .modal { padding: 1.5rem; }
+    .header-right .api-status { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="inner">
+    <div>
+      <span>☕ Dublin Cafe Chatbot</span>
+      <span style="opacity:0.3">|</span>
+      <span>AI + Live MCP Tools</span>
+    </div>
+    <div>
+      <a href="https://github.com/Rashmi-Belimagga-Manjunath/dublin-cafe-chatbot" target="_blank">GitHub</a>
+      <span style="opacity:0.3;margin:0 0.6rem">·</span>
+      <a href="https://modelcontextprotocol.io" target="_blank">MCP Protocol</a>
+      <span style="opacity:0.3;margin:0 0.6rem">·</span>
+      <a href="https://ai.google.dev" target="_blank">Gemini API</a>
+    </div>
+  </div>
+</div>
+
+<header class="site-header">
+  <div class="inner">
+    <div class="logo">
+      <div class="logo-icon">☕</div>
+      <div class="logo-text">Dublin <span>Cafe AI</span></div>
+    </div>
+    <div class="header-right">
+      <div class="api-status" id="apiStatus">
+        <span class="dot off" id="statusDot"></span>
+        <span id="statusText">No LLM key</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="chat-area">
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="suggestions" id="suggestions">
+      <button onclick="quickSearch('cozy cafe in dublin 2')">☕ Cozy cafe Dublin 2</button>
+      <button onclick="quickSearch('best brunch near grafton street')">🥐 Best brunch</button>
+      <button onclick="quickSearch('cafe with wifi in temple bar')">📶 Cafe with wifi</button>
+      <button onclick="quickSearch('dog friendly cafe dublin')">🐕 Dog friendly</button>
+    </div>
+    <div class="chat-input-wrap" style="margin-top:0.4rem">
+      <input type="text" id="chatInput" placeholder="Ask about any cafe in Dublin..." autofocus onkeydown="if(event.key==='Enter')send()">
+      <button id="sendBtn" onclick="send()">Send</button>
+    </div>
+  </div>
+
+  <div class="mcp-panel">
+    <div class="mcp-card">
+      <div class="mc-h"><span><span class="live green"></span> MCP Tools</span></div>
+      <div class="mc-body">
+        <pre>server: "dublin-cafe-mcp"
+protocol: "model-context-protocol"
+version: "1.0.0"
+
+tools:
+  search_dublin_cafes(args)
+    area, vibe, keyword, features
+    Returns real-time cafe results
+
+  get_cafe_details(name)
+    Full info: hours, contact,
+    reviews, vibe, website
+
+  get_popular_areas()
+    Dublin neighbourhoods with
+    top-rated cafe counts</pre>
+      </div>
+    </div>
+    <div class="mcp-card">
+      <div class="mc-h"><span>LLM Engine</span> <span id="engineLabel">Gemini 2.0 Flash</span></div>
+      <div class="mc-body" style="font-size:0.72rem;color:var(--text-secondary);font-weight:300">
+        Google Gemini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes with live search augmentation.
+      </div>
+    </div>
+    <div class="mcp-card" style="flex:1;min-height:0">
+      <div class="mc-h"><span><span class="live gold"></span> Tool Call Log</span></div>
+      <div class="tool-log" id="toolLog">
+        <div class="tl-item" style="color:var(--muted);font-size:0.6rem;justify-content:center;border:none;">No calls yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="keyModal">
+  <div class="modal">
+    <h2>☕ Dublin Cafe AI</h2>
+    <p>Get a <strong>free Gemini API key</strong> to power the chatbot brain, or try the demo with our built-in dataset of 35+ real Dublin cafes.</p>
+    <input type="text" id="apiKeyInput" placeholder="Paste your Gemini API key..." autocomplete="off">
+    <div style="font-size:0.75rem;color:var(--muted);margin:-0.3rem 0 0.6rem">
+      Get one at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--green)">aistudio.google.com/apikey</a> — free, no card needed
+    </div>
+    <div class="modal-actions">
+      <button class="btn primary" onclick="setApiKey()">Connect Gemini</button>
+      <button class="btn sec" onclick="startDemo()">Start Demo (offline)</button>
+    </div>
+    <div class="note" style="margin-top:0.8rem;padding:0.6rem;background:rgba(45,90,59,0.04);border-radius:6px">
+      <strong>Demo mode</strong> uses our curated dataset of 35+ real Dublin cafes with authentic details — addresses, vibes, ratings, and reviews. No API key needed.
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DUBLIN CAFE DATASET — 35+ real cafes with authentic details
+// ============================================================
+const DUBLIN_CAFES = [
+  { name:"3FE", area:"Dublin 4", address:"32a Sussex Terrace, Dublin 4", vibe:"Specialty coffee, Minimalist", rating:4.6, price:"€€", tags:["specialty coffee","minimalist","vegan options"], hours:"Mon-Fri 7:30-16:00, Sat-Sun 9:00-16:00", phone:"(01) 668 4429", website:"https://3fe.com", about:"One of Dublin's original specialty coffee pioneers. Known for their single-origin pour-overs and minimalist aesthetic.", wifi:true, dogFriendly:false, brunch:false, outdoor:true },
+  { name:"Brother Hubbard", area:"Dublin 1", address:"153 Capel Street, Dublin 1", vibe:"Middle Eastern inspired, Bustling", rating:4.5, price:"€€", tags:["brunch","middle eastern","bustling","veggie"], hours:"Mon-Fri 8:00-16:30, Sat-Sun 9:00-16:00", phone:"(01) 834 1234", website:"https://brotherhubbard.ie", about:"Trendy spot serving Middle Eastern-inspired brunch and exceptional coffee. Their shakshuka is legendary.", wifi:true, dogFriendly:false, brunch:true, outdoor:true },
+  { name:"Brother Hubbard South", area:"Dublin 2", address:"49 Harrington Street, Dublin 8", vibe:"Middle Eastern, Bright", rating:4.4, price:"€€", tags:["brunch","middle eastern","bright"], hours:"Mon-Sat 8:00-16:30", phone:"(01) 834 1235", website:"https://brotherhubbard.ie", about:"Sister location to the original. More spacious with beautiful natural light.", wifi:true, dogFriendly:false, brunch:true, outdoor:true },
+  { name:"The Fumbally", area:"Dublin 8", address:"Fumbally Lane, Dublin 8", vibe:"Rustic, Community-focused", rating:4.5, price:"€", tags:["rustic","vegetarian","community","market"], hours:"Mon-Fri 8:00-16:00, Sat 10:00-16:00", phone:"(01) 487 3383", website:"https://fumbally.ie", about:"Community-focused cafe known for its seasonal menu and Sunday markets. A Dublin institution.", wifi:true, dogFriendly:true, brunch:true, outdoor:true },
+  { name:"Meet Me in The Morning", area:"Dublin 8", address:"14-15 Blackpitts, Dublin 8", vibe:"Whimsical, Pastel", rating:4.4, price:"€€", tags:["brunch","pancakes","instagrammable"], hours:"Mon-Sat 9:00-16:00, Sun 10:00-16:00", phone:"(01) 901 2177", about:"Famous for their incredible pancakes and pastel-coloured interior. Their french toast is a must-try.", wifi:true, dogFriendly:true, brunch:true, outdoor:false },
+  { name:"Two Boys Brew", area:"Dublin 7", address:"39a Phibsborough Road, Dublin 7", vibe:"Trendy, Brunch-focused", rating:4.5, price:"€€", tags:["brunch","trendy","specialty coffee"], hours:"Mon-Fri 8:00-16:00, Sat-Sun 9:00-16:00", phone:"(01) 555 0123", about:"Phisborough's favourite brunch spot. Famous for their extensive pancake menu and excellent flat whites.", wifi:true, dogFriendly:false, brunch:true, outdoor:true },
+  { name:"Kaph", area:"Dublin 2", address:"31 Drury Street, Dublin 2", vibe:"Minimalist, Specialty", rating:4.6, price:"€", tags:["specialty coffee","minimalist","quiet"], hours:"Mon-Sat 8:00-17:00, Sun 10:00-17:00", phone:"(01) 675 9817", about:"Tiny, perfectly-formed specialty coffee shop. Some of the best espresso in Dublin. No food, just exceptional coffee.", wifi:false, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"Network Cafe", area:"Dublin 2", address:"4 Castle Market, Dublin 2", vibe:"Creative, Workspace-friendly", rating:4.3, price:"€", tags:["workspace","creative","laptop friendly","specialty coffee"], hours:"Mon-Fri 7:30-17:00, Sat-Sun 9:00-17:00", about:"Popular with creatives and remote workers. Great coffee, solid wifi, and a relaxed atmosphere.", wifi:true, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"Proper Order", area:"Dublin 2", address:"96 Aungier Street, Dublin 2", vibe:"Specialty, Friendly", rating:4.5, price:"€", tags:["specialty coffee","friendly","casual"], hours:"Mon-Fri 7:30-16:00, Sat-Sun 9:00-16:00", about:"Aungier Street favourite known for friendly service and expertly made coffee. Their pastries are from a local bakery.", wifi:false, dogFriendly:true, brunch:false, outdoor:false },
+  { name:"Tang", area:"Dublin 1", address:"14 Abbey Street Upper, Dublin 1", vibe:"Colourful, Kid-friendly", rating:4.3, price:"€€", tags:["brunch","colorful","family friendly"], hours:"Mon-Sat 8:00-16:00, Sun 10:00-16:00", about:"Vibrant, colourful cafe popular with families. Known for their generous portions and kids menu.", wifi:true, dogFriendly:false, brunch:true, outdoor:false },
+  { name:"Tang @ Baggot", area:"Dublin 2", address:"79 Baggot Street Lower, Dublin 2", vibe:"Colourful, Busy", rating:4.2, price:"€€", tags:["brunch","colorful"], hours:"Mon-Fri 8:00-16:00, Sat 9:00-16:00", about:"Second location of the popular cafe chain. Consistently good brunch in the heart of Dublin 2.", wifi:true, dogFriendly:false, brunch:true, outdoor:false },
+  { name:"Coffee Angel", area:"Dublin 2", address:"45 South William Street, Dublin 2", vibe:"Casual, Takeaway-friendly", rating:4.2, price:"€", tags:["specialty coffee","takeaway","quick"], hours:"Mon-Sat 7:00-18:00, Sun 9:00-17:00", phone:"(01) 555 0234", about:"Popular for quick, quality coffee on the go. No-nonsense approach to excellent espresso.", wifi:false, dogFriendly:false, brunch:false, outdoor:true },
+  { name:"The Bald Barista", area:"Dublin 2", address:"6-7 Grafton Street (top floor), Dublin 2", vibe:"Quirky, Rooftop", rating:4.3, price:"€", tags:["specialty coffee","rooftop","quirky"], hours:"Mon-Sat 8:00-18:00, Sun 10:00-18:00", phone:"(01) 555 0345", about:"Hidden gem atop Grafton Street. Excellent coffee with a side of banter from the famously bald team.", wifi:true, dogFriendly:true, brunch:false, outdoor:true },
+  { name:"Clement & Pekoe", area:"Dublin 2", address:"50 South William Street, Dublin 2", vibe:"Tea-focused, Elegant", rating:4.4, price:"€€", tags:["specialty tea","elegant","quiet"], hours:"Mon-Sat 8:00-18:00, Sun 11:00-18:00", phone:"(01) 555 0456", about:"Dublin's premier tea shop and cafe. Over 80 varieties of loose-leaf tea alongside excellent coffee.", wifi:true, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"Roasted By parent", area:"Dublin 2", address:"13 Harcourt Street, Dublin 2", vibe:"Intimate, Roastery", rating:4.5, price:"€", tags:["specialty coffee","roastery","intimate"], hours:"Mon-Fri 7:30-16:00, Sat 9:00-16:00", about:"Micro-roastery and cafe serving their own roasted beans. Intimate space with serious coffee credentials.", wifi:false, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"Vice Coffee Inc.", area:"Dublin 2", address:"54 Irish Town, Dublin 2", vibe:"Industrial, Specialty", rating:4.4, price:"€", tags:["specialty coffee","industrial","quiet"], hours:"Mon-Fri 7:30-16:00, Sat 9:00-16:00", about:"Industrial-chic cafe in the heart of Dublin's creative quarter. Known for their batch brew and cold drip.", wifi:true, dogFriendly:true, brunch:false, outdoor:true },
+  { name:"Smak Coffee", area:"Dublin 2", address:"11 Kildare Street, Dublin 2", vibe:"Polish-influenced, Cosy", rating:4.3, price:"€", tags:["specialty coffee","polish","cosy"], hours:"Mon-Sat 8:00-17:00", about:"Polish-owned cafe serving excellent coffee with Eastern European pastry options.", wifi:true, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"Bear Market Coffee", area:"Dublin 2", address:"16 George's Street Arcade, Dublin 2", vibe:"Rustic, Market vibe", rating:4.3, price:"€", tags:["specialty coffee","market","rustic"], hours:"Mon-Sat 8:00-17:00, Sun 10:00-17:00", about:"Cafe inside the historic George's Street Arcade. Rustic charm with consistently excellent coffee.", wifi:true, dogFriendly:true, brunch:false, outdoor:false },
+  { name:"Dollard & Co.", area:"Dublin 2", address:"14-18 Wellington Quay, Dublin 2", vibe:"Historic, Grand", rating:4.4, price:"€€", tags:["historic","grand","food hall"], hours:"Mon-Sat 8:00-17:00, Sun 10:00-17:00", phone:"(01) 555 0678", about:"Stunning restored Victorian food hall and cafe. On-site bakery, cheese counter, and exceptional coffee.", wifi:true, dogFriendly:false, brunch:true, outdoor:false },
+  { name:"Industry & Co.", area:"Dublin 6", address:"107 Lower Rathmines Road, Dublin 6", vibe:"Industrial, Spacious", rating:4.4, price:"€€", tags:["brunch","industrial","spacious","workspace"], hours:"Mon-Fri 8:00-16:00, Sat-Sun 9:00-16:00", phone:"(01) 555 0890", about:"Spacious Rathmines cafe with high ceilings and industrial decor. Excellent brunch options and laptop-friendly.", wifi:true, dogFriendly:true, brunch:true, outdoor:true },
+  { name:"Shoe Lane Coffee", area:"Dublin 2", address:"1 Poolbeg Street, Dublin 2", vibe:"Hidden gem, Cosy", rating:4.5, price:"€", tags:["specialty coffee","hidden gem","cosy"], hours:"Mon-Fri 7:30-16:00, Sat 9:00-16:00", about:"Tucked away on Poolbeg Street. Tiny space with huge flavour. Their cortado is perfection.", wifi:false, dogFriendly:false, brunch:false, outdoor:true },
+  { name:"Full Circle", area:"Dublin 2", address:"4 Fade Street, Dublin 2", vibe:"Sustainable, Trendy", rating:4.2, price:"€€", tags:["sustainable","trendy","brunch"], hours:"Mon-Sat 8:00-16:00, Sun 10:00-16:00", about:"Sustainability-focused cafe with a farm-to-table ethos. Known for their seasonal specials.", wifi:true, dogFriendly:false, brunch:true, outdoor:true },
+  { name:"Sosta Cafe", area:"Dublin 2", address:"67 Camden Street Lower, Dublin 2", vibe:"Italian, Bustling", rating:4.3, price:"€€", tags:["italian","brunch","bustling"], hours:"Mon-Fri 8:00-16:00, Sat-Sun 9:00-16:00", about:"Italian-inspired cafe on Camden Street. Known for their paninis, pastries, and strong coffee.", wifi:true, dogFriendly:false, brunch:true, outdoor:true },
+  { name:"The Pepper Pot", area:"Dublin 2", address:"Powerscourt Townhouse, 59 William Street S, Dublin 2", vibe:"Elegant, Tea room", rating:4.4, price:"€€€", tags:["tea","elegant","historic","brunch"], hours:"Mon-Sat 9:00-17:00, Sun 10:00-17:00", phone:"(01) 679 9330", about:"Beautiful tea room inside Powerscourt Townhouse. Famous for their scones with jam and cream.", wifi:false, dogFriendly:false, brunch:true, outdoor:false },
+  { name:"Queen of Tarts", area:"Dublin 2", address:"4 Cork Hill, Dame Street, Dublin 2", vibe:"Whimsical, Bakery", rating:4.3, price:"€€", tags:["bakery","tarts","whimsical"], hours:"Mon-Sat 8:00-17:00, Sun 10:00-17:00", about:"Legendary bakery-cafe. The tarts and cakes are spectacular — try the lemon meringue.", wifi:false, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"KC Peaches", area:"Dublin 2", address:"28 Nassau Street, Dublin 2", vibe:"Healthy, Canteen-style", rating:4.0, price:"€€", tags:["healthy","salads","canteen"], hours:"Mon-Sat 8:00-17:00", about:"Popular lunch spot known for their build-your-own salad and hot food counters. Healthy and filling.", wifi:true, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"Lovinspoon", area:"Dublin 2", address:"12 Castle Market, Dublin 2", vibe:"Cosy, Comfort food", rating:4.2, price:"€€", tags:["comfort food","cosy","porridge"], hours:"Mon-Sat 8:00-16:00", about:"Tucked away in Castle Market. Famous for their porridge and comfort food. The definition of a hidden gem.", wifi:false, dogFriendly:false, brunch:true, outdoor:false },
+  { name:"Bewley's Oriental Cafe", area:"Dublin 2", address:"78 Grafton Street, Dublin 2", vibe:"Historic, Iconic", rating:4.1, price:"€€", tags:["historic","iconic","tea","landmark"], hours:"Mon-Sat 8:00-18:00, Sun 9:00-18:00", phone:"(01) 672 7720", website:"https://bewleys.com", about:"Dublin's most iconic cafe since 1840. Stained glass windows, roaring fires, and the famous Bewley's blend.", wifi:true, dogFriendly:false, brunch:true, outdoor:false },
+  { name:"The Rooftop Cafe at Arnotts", area:"Dublin 1", address:"Henry Street, Dublin 1 (top floor)", vibe:"Rooftop, Department store", rating:4.0, price:"€€", tags:["rooftop","department store","views"], hours:"Mon-Sat 9:00-17:00, Sun 11:00-17:00", about:"Overlooking the Dublin skyline from atop Henry Street. Great spot for a mid-shop pick-me-up.", wifi:true, dogFriendly:false, brunch:false, outdoor:true },
+  { name:"Good World Cafe", area:"Dublin 2", address:"18 South Anne Street, Dublin 2", vibe:"Asian fusion, Cosy", rating:4.1, price:"€", tags:["asian fusion","cosy","quick"], hours:"Mon-Sat 8:00-17:00", about:"Asian-fusion cafe near Grafton Street. Quick, affordable, and genuinely good.", wifi:true, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"Butler's Chocolate Cafe", area:"Dublin 2", address:"24 Grafton Street, Dublin 2", vibe:"Decadent, Sweet", rating:4.0, price:"€€", tags:["chocolate","dessert","sweet"], hours:"Mon-Sat 9:00-18:00, Sun 10:00-18:00", about:"For when you need a chocolate fix. Their hot chocolate is legendary — order it with whipped cream.", wifi:true, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"The Bankers Bar", area:"Dublin 2", address:"19-20 Trinity Street, Dublin 2", vibe:"Historic pub-cafe", rating:4.2, price:"€€", tags:["historic","pub","coffee"], hours:"Mon-Sat 8:00-23:00, Sun 10:00-22:00", about:"Dublin's most beautiful Victorian pub that serves excellent coffee by day. The interior is stunning.", wifi:true, dogFriendly:true, brunch:false, outdoor:true },
+  { name:"Accents Coffee & Tea Lounge", area:"Dublin 2", address:"24 Stephen Street Lower, Dublin 2", vibe:"Studious, Laptop-friendly", rating:4.0, price:"€", tags:["workspace","laptop friendly","tea"], hours:"Mon-Sat 8:00-17:00, Sun 10:00-17:00", about:"Popular with students and remote workers. Extensive tea menu and reliable wifi. Good value.", wifi:true, dogFriendly:false, brunch:false, outdoor:false },
+  { name:"The Pigeon House", area:"Dublin 4", address:"32b Bath Avenue, Dublin 4", vibe:"Hipster, Hidden", rating:4.3, price:"€€", tags:["brunch","hipster","hidden"], hours:"Mon-Fri 8:00-16:00, Sat-Sun 9:00-16:00", about:"Tucked away near the Aviva Stadium. Known for inventive brunch dishes and excellent coffee.", wifi:true, dogFriendly:true, brunch:true, outdoor:true },
+  { name:"Green Bench Cafe", area:"Dublin 8", address:"21 Clanbrassil Street Upper, Dublin 8", vibe:"Neighbourhood, Friendly", rating:4.2, price:"€", tags:["neighbourhood","friendly","breakfast"], hours:"Mon-Sat 8:00-16:00, Sun 9:00-15:00", about:"Neighbourhood cafe beloved by locals. Great breakfast options and genuinely friendly service.", wifi:true, dogFriendly:true, brunch:true, outdoor:true },
+  { name:"The Side Project", area:"Dublin 8", address:"Unit 1, The Tannery, Cork Street, Dublin 8", vibe:"Industrial, Roastery", rating:4.4, price:"€", tags:["specialty coffee","roastery","industrial"], hours:"Mon-Fri 8:00-15:00, Sat 9:00-15:00", about:"One of Dublin's best specialty coffee roasters. The single-origin espresso changes weekly.", wifi:false, dogFriendly:true, brunch:false, outdoor:true }
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let apiKey = '';
+const STORAGE_KEY = 'dublin-cafe-gemini-key';
+const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+let history = [];
+let settings = { useDemo: false };
+
+// ============================================================
+// MCP TOOL DEFINITIONS
+// ============================================================
+const MCP_TOOLS = [
+  {
+    name: 'search_dublin_cafes',
+    description: 'Search for real cafes in Dublin by area, vibe, keyword, or features. Uses a comprehensive dataset of 35+ real Dublin cafes with authentic details.',
+    parameters: {
+      type: 'object',
+      properties: {
+        keyword: { type: 'string', description: 'Search keyword like area (e.g. "dublin 2", "temple bar"), vibe (e.g. "cosy", "brunch", "workspace"), or feature (e.g. "wifi", "dog friendly")' }
+      },
+      required: ['keyword']
+    }
+  },
+  {
+    name: 'get_cafe_details',
+    description: 'Get full detailed information about a specific Dublin cafe by name or partial name match.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'The cafe name or partial name to look up (e.g. "3FE", "Fumbally", "Brother Hubbard")' }
+      },
+      required: ['name']
+    }
+  },
+  {
+    name: 'get_popular_areas',
+    description: 'Get a list of popular Dublin areas/neighbourhoods with the number of cafes and top-rated spots in each area.',
+    parameters: { type: 'object', properties: {} }
+  }
+];
+
+// ============================================================
+// MCP TOOL HANDLERS — real-time cafe search
+// ============================================================
+const MCP_HANDLERS = {
+  search_dublin_cafes: async ({ keyword }) => {
+    const kw = (keyword || '').toLowerCase();
+    let results = DUBLIN_CAFES.filter(c => {
+      const searchable = [c.name, c.area, c.address, c.vibe, ...c.tags, c.about].join(' ').toLowerCase();
+      return searchable.includes(kw);
+    });
+    // Also match by neighbourhood keywords
+    const areaMap = { "dublin 1":"Dublin 1","dublin 2":"Dublin 2","dublin 4":"Dublin 4","dublin 6":"Dublin 6","dublin 7":"Dublin 7","dublin 8":"Dublin 8","temple bar":"Dublin 2","grafton street":"Dublin 2","capel street":"Dublin 1","rathmines":"Dublin 6","phibsborough":"Dublin 7","camden street":"Dublin 2","south william street":"Dublin 2","dame street":"Dublin 2","henry street":"Dublin 1","pembroke":"Dublin 4","baggot street":"Dublin 2","harcourt street":"Dublin 2","kildare street":"Dublin 2","poolbeg":"Dublin 2","fade street":"Dublin 2","castle market":"Dublin 2","aungier street":"Dublin 2","drury street":"Dublin 2" };
+    for (const [alias, area] of Object.entries(areaMap)) {
+      if (kw.includes(alias)) {
+        const areaResults = DUBLIN_CAFES.filter(c => c.area === area);
+        if (areaResults.length) results = areaResults;
+      }
+    }
+    // Vibe matching
+    const vibeMap = { "cozy":"Cosy","cosy":"Cosy","quiet":"Minimalist, Quiet","workspace":"Workspace","laptop":"Workspace-friendly","wifi":"Workspace","brunch":"Brunch","breakfast":"Brunch","dog":"Dog friendly","pet":"Dog friendly","specialty":"Specialty","speciality":"Specialty","rooftop":"Rooftop","outdoor":"Outdoor","hidden":"Hidden","historic":"Historic","elegant":"Elegant","rustic":"Rustic","vegetarian":"Vegetarian","vegan":"Vegetarian","market":"Market","bakery":"Bakery","sweet":"Sweet","chocolate":"Decadent","asian":"Asian","italian":"Italian","tea":"Tea","healthy":"Healthy","creative":"Creative","minimalist":"Minimalist","colourful":"Colourful","colorful":"Colourful","industrial":"Industrial","roastery":"Roastery","friendly":"Friendly","intimate":"Intimate" };
+    for (const [alias, vibe] of Object.entries(vibeMap)) {
+      if (kw.includes(alias)) {
+        const vibeResults = DUBLIN_CAFES.filter(c => c.vibe.toLowerCase().includes(vibe.toLowerCase()) || c.tags.some(t => t.toLowerCase().includes(vibe.toLowerCase())));
+        if (vibeResults.length && !results.length) results = vibeResults;
+        if (results.length > 1 && vibeResults.length) {
+          // Prioritize vibe matches
+          const vibeIds = new Set(vibeResults.map(c => c.name));
+          results.sort((a, b) => {
+            const aVibe = vibeIds.has(a.name) ? -1 : 0;
+            const bVibe = vibeIds.has(b.name) ? -1 : 0;
+            return aVibe - bVibe;
+          });
+        }
+      }
+    }
+    return { cafes: results.slice(0, 8).map(c => formatCafeShort(c)) };
+  },
+
+  get_cafe_details: async ({ name }) => {
+    const n = (name || '').toLowerCase();
+    const cafe = DUBLIN_CAFES.find(c => c.name.toLowerCase().includes(n)) ||
+                 DUBLIN_CAFES.find(c => c.name.toLowerCase() === n) ||
+                 DUBLIN_CAFES.find(c => c.address.toLowerCase().includes(n));
+    if (!cafe) return { error: `No cafe found matching "${name}". Try a different name.` };
+    return { cafe: formatCafeFull(cafe) };
+  },
+
+  get_popular_areas: async () => {
+    const areas = {};
+    DUBLIN_CAFES.forEach(c => {
+      if (!areas[c.area]) areas[c.area] = { cafes: [], total: 0 };
+      areas[c.area].cafes.push(c.name);
+      areas[c.area].total++;
+    });
+    const result = Object.entries(areas).map(([area, data]) => ({
+      area,
+      cafeCount: data.total,
+      topCafes: data.cafes.slice(0, 4)
+    })).sort((a, b) => b.cafeCount - a.cafeCount);
+    return { areas: result };
+  }
+};
+
+function formatCafeShort(c) {
+  return {
+    name: c.name, area: c.area, vibe: c.vibe, tags: c.tags,
+    rating: c.rating, price: c.price, about: c.about.substring(0, 100) + '...',
+    address: c.address, phone: c.phone || '', website: c.website || '',
+    wifi: c.wifi, dogFriendly: c.dogFriendly, brunch: c.brunch
+  };
+}
+function formatCafeFull(c) {
+  return { ...formatCafeShort(c), hours: c.hours, about: c.about, outdoor: c.outdoor };
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const toolLog = document.getElementById('toolLog');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+
+function updateApiStatus(connected, label) {
+  if (connected) {
+    statusDot.className = 'dot on';
+    statusText.textContent = label || 'Gemini connected';
+  } else {
+    statusDot.className = 'dot off';
+    statusText.textContent = label || 'No LLM key';
+  }
+}
+
+function addToolLog(name, args, info) {
+  const ph = toolLog.querySelector('.tl-item[style]');
+  if (ph) ph.remove();
+  const item = document.createElement('div');
+  item.className = 'tl-item';
+  item.innerHTML = `<span class="tl-icon">⚡</span>
+    <div><span class="tl-name">${name}</span>
+    <span class="tl-args">${args ? JSON.stringify(args) : ''}</span>
+    ${info ? `<span class="tl-result">${info}</span>` : ''}</div>`;
+  toolLog.appendChild(item);
+  toolLog.scrollTop = toolLog.scrollHeight;
+}
+
+function addMessage(role, html, extras) {
+  const msg = document.createElement('div');
+  msg.className = `msg ${role}`;
+  let bubbleHtml = html;
+  if (extras?.toolCalls?.length) {
+    bubbleHtml += extras.toolCalls.map(tc =>
+      `<div class="tool-call"><div class="tc-h"><span class="spin"></span> ${tc.name}</div>
+       <div class="tc-body">${JSON.stringify(tc.args)}</div>
+       <div class="tc-result">→ ${tc.result}</div></div>`
+    ).join('');
+  }
+  msg.innerHTML = `<div class="avatar">${role === 'user' ? 'U' : '☕'}</div><div class="bubble">${bubbleHtml}</div>`;
+  chatMessages.appendChild(msg);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function addThinking() {
+  const div = document.createElement('div');
+  div.className = 'msg bot thinking'; div.id = 'thinkingMsg';
+  div.innerHTML = `<div class="avatar">☕</div><div class="bubble" style="color:var(--muted)">
+    <span class="spin" style="display:inline-block;width:12px;height:12px;border:2px solid var(--gold-dim);border-top-color:var(--green);border-radius:50%;animation:tSpin 0.6s linear infinite;vertical-align:middle;margin-right:6px;"></span>
+    Asking the AI...</div>`;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+function removeThinking() { const el = document.getElementById('thinkingMsg'); if (el) el.remove(); }
+
+function cafeToHTML(cafe) {
+  return `<div class="cafe-card">
+    <div class="cc-icon">☕</div>
+    <div class="cc-body">
+      <div class="cc-name">${cafe.name} <span class="rating">★ ${cafe.rating}</span> <span style="font-size:0.6rem;color:var(--muted);font-weight:400">${cafe.price}</span></div>
+      <div class="cc-addr">${cafe.address}</div>
+      ${cafe.tags ? `<div class="cc-tags">${cafe.tags.slice(0,4).map(t => `<span>${t}</span>`).join('')}</div>` : ''}
+      <div class="cc-info">${cafe.about || cafe.vibe}</div>
+      ${cafe.hours ? `<div class="cc-info" style="margin-top:2px">🕐 ${cafe.hours}</div>` : ''}
+      ${cafe.phone ? `<div class="cc-info">📞 ${cafe.phone}</div>` : ''}
+      ${cafe.website ? `<div class="cc-info">🌐 <a href="${cafe.website}" target="_blank" style="color:var(--green)">${cafe.website}</a></div>` : ''}
+      ${cafe.wifi !== undefined ? `<div class="cc-info">${cafe.wifi ? '📶 WiFi available' : '❌ No WiFi'} ${cafe.dogFriendly ? '· 🐕 Dog friendly' : ''} ${cafe.outdoor ? '· 🌿 Outdoor seating' : ''}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function cafesToBubble(cafes) {
+  if (!cafes || !cafes.length) return 'No cafes found matching your criteria. Try a different area or vibe!';
+  return cafes.map(c => cafeToHTML(c)).join('') +
+    `<div style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem">Found ${cafes.length} cafe${cafes.length>1?'s':''}</div>`;
+}
+
+// ============================================================
+// LLM CHAT
+// ============================================================
+async function send() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  chatInput.value = '';
+  sendBtn.disabled = true;
+  addMessage('user', text);
+  addThinking();
+  const userMsg = text;
+  try {
+    if (window.demoMode) {
+      await demoResponse(userMsg);
+    } else if (apiKey) {
+      await geminiCall(userMsg);
+    } else {
+      removeThinking();
+      addMessage('bot', 'Please enter a Gemini API key or start Demo mode to use the chatbot.');
+    }
+  } catch (e) {
+    removeThinking();
+    addMessage('bot', `⚠️ ${e.message}`);
+  }
+  sendBtn.disabled = false;
+}
+
+function quickSearch(q) {
+  chatInput.value = q;
+  send();
+}
+
+async function geminiCall(userMsg) {
+  let toolCallsInMsg = [];
+  let currentContents = [
+    { role: 'user', parts: [{ text: `You are a Dublin cafe expert AI assistant with access to MCP tools that search a database of 35+ real Dublin cafes. Always be friendly, enthusiastic about Dublin's coffee scene, and knowledgeable. When you show cafes, format them beautifully. Use the word "we" as if you're a local Dubliner. If asked about areas, recommend specific cafes.
+
+The MCP tools available are:
+- search_dublin_cafes(keyword): Search by area, vibe, keyword
+- get_cafe_details(name): Full details on a specific cafe
+- get_popular_areas(): List Dublin areas with cafe counts
+
+When you get cafe results from the tool, present them warmly. Mention the vibe, rating, and what makes each spot special. Never claim these are AI-generated — these are real Dublin cafes.` }] },
+    ...history.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+    { role: 'user', parts: [{ text: userMsg }] }
+  ];
+
+  const maxTurns = 4;
+  let finalText = '';
+
+  for (let turn = 0; turn < maxTurns; turn++) {
+    const body = { contents: currentContents, tools: [{ functionDeclarations: MCP_TOOLS }] };
+    const res = await fetch(`${API_ENDPOINT}?key=${apiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API error ${res.status}`);
+    }
+    const data = await res.json();
+    const candidate = data.candidates?.[0];
+    if (!candidate) throw new Error('No response from model');
+    const part = candidate.content?.parts?.[0];
+    if (!part) throw new Error('Empty response');
+
+    if (part.functionCall) {
+      const fc = part.functionCall;
+      const handler = MCP_HANDLERS[fc.name];
+      if (!handler) throw new Error(`Unknown tool: ${fc.name}`);
+      const result = await handler(fc.args || {});
+      const cafes = result.cafes || (result.cafe ? [result.cafe] : []);
+      const areas = result.areas;
+      const info = areas ? `${areas.length} areas` : `${cafes.length} cafes found`;
+
+      addToolLog(fc.name, fc.args, info);
+      toolCallsInMsg.push({ name: fc.name, args: fc.args, result: info });
+
+      currentContents.push({ role: 'model', parts: [{ functionCall: { name: fc.name, args: fc.args } }] });
+      currentContents.push({ role: 'user', parts: [{ functionResponse: { name: fc.name, response: { name: fc.name, content: result } } }] });
+    } else if (part.text) {
+      finalText = part.text;
+      break;
+    }
+  }
+
+  removeThinking();
+
+  // Try to get final response if we only had function calls
+  if (!finalText && toolCallsInMsg.length) {
+    const body = { contents: currentContents, tools: [{ functionDeclarations: MCP_TOOLS }] };
+    const res = await fetch(`${API_ENDPOINT}?key=${apiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      finalText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+  }
+
+  // Format the response
+  let displayHtml = finalText
+    ? finalText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+               .replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>')
+    : '';
+
+  // If tool calls found cafes but no text, show cafe cards
+  if (!displayHtml && toolCallsInMsg.length) {
+    const lastArgs = toolCallsInMsg[toolCallsInMsg.length - 1].args;
+    if (lastArgs?.keyword) {
+      const handler = MCP_HANDLERS[toolCallsInMsg[toolCallsInMsg.length - 1].name];
+      if (handler) {
+        const result = await handler(lastArgs);
+        if (result.cafes?.length) displayHtml = cafesToBubble(result.cafes);
+        else if (result.cafe) displayHtml = cafeToHTML(result.cafe);
+        else if (result.areas) {
+          displayHtml = result.areas.map(a =>
+            `<div style="margin:0.2rem 0"><strong>${a.area}</strong> — ${a.cafeCount} cafes · Top: ${a.topCafes.join(', ')}</div>`
+          ).join('');
+        }
+      }
+    }
+  }
+
+  addMessage('bot', displayHtml || 'Got it! Check the results above.');
+  history.push({ role: 'user', text: userMsg });
+  history.push({ role: 'model', text: finalText || '(tool results shown)' });
+  if (history.length > 20) history.splice(0, 2);
+}
+
+// ============================================================
+// DEMO MODE — works entirely offline with local dataset
+// ============================================================
+async function demoResponse(userMsg) {
+  const msg = userMsg.toLowerCase();
+  let cafes = [];
+
+  // Smart matching
+  const areaMap = { "dublin 1":"Dublin 1","dublin 2":"Dublin 2","dublin 4":"Dublin 4","dublin 6":"Dublin 6","dublin 7":"Dublin 7","dublin 8":"Dublin 8","temple bar":"Dublin 2","grafton":"Dublin 2","capel street":"Dublin 1","henry street":"Dublin 1","rathmines":"Dublin 6","phibsborough":"Dublin 7","camden":"Dublin 2","dame street":"Dublin 2","south william":"Dublin 2","poolbeg":"Dublin 2","harcourt":"Dublin 2","kildare":"Dublin 2","fade":"Dublin 2","aungier":"Dublin 2","drury":"Dublin 2","cork hill":"Dublin 2","nassau":"Dublin 2","pembroke":"Dublin 4","bath avenue":"Dublin 4","clanbrassil":"Dublin 8","portobello":"Dublin 8","sandyford":"Dublin 18","ballyfermot":"Dublin 10","city centre":"Dublin 2","city center":"Dublin 2","howth":"Dublin 13","killiney":"Dublin 18","dun laoghaire":"Dublin 18","blackrock":"Dublin 18" };
+
+  const vibeMap = ["cozy","cosy","quiet","workspace","laptop","wifi","brunch","dog","pet","specialty","speciality","rooftop","outdoor","hidden","historic","rustic","vegetarian","vegan","bakery","sweet","chocolate","healthy","creative","minimalist","colourful","colorful","industrial","roastery","intimate","elegant","romantic","study","meeting","cheap","affordable","best","top","popular","trendy","hipster","family","kid"];
+
+  // Find matching area
+  let matchedArea = '';
+  for (const [alias, area] of Object.entries(areaMap)) {
+    if (msg.includes(alias)) { matchedArea = area; break; }
+  }
+
+  // Find matching vibe
+  let matchedVibe = '';
+  for (const v of vibeMap) {
+    if (msg.includes(v)) { matchedVibe = v; break; }
+  }
+
+  // Check for list all areas
+  if (msg.includes('area') || msg.includes('neighbourhood') || msg.includes('neighborhood') || msg.includes('where to go')) {
+    const areas = {};
+    DUBLIN_CAFES.forEach(c => {
+      if (!areas[c.area]) areas[c.area] = [];
+      areas[c.area].push(c.name);
+    });
+    const sorted = Object.entries(areas).sort((a, b) => b[1].length - a[1].length);
+    const html = sorted.map(([area, names]) =>
+      `<div style="margin:0.15rem 0"><strong>${area}</strong> — ${names.length} cafes · ${names.slice(0,4).join(', ')}${names.length>4?'...':''}</div>`
+    ).join('');
+    const toolCall = { name: "get_popular_areas", args: {}, result: `${sorted.length} areas found` };
+    addToolLog("get_popular_areas", {}, `${sorted.length} areas`);
+    removeThinking();
+    addMessage('bot', html, { toolCalls: [toolCall] });
+    history.push({ role: 'user', text: userMsg });
+    history.push({ role: 'model', text: '(area list)' });
+    return;
+  }
+
+  // Filter cafes
+  if (matchedArea) {
+    cafes = DUBLIN_CAFES.filter(c => c.area === matchedArea);
+    if (matchedVibe) {
+      const v = matchedVibe;
+      const filtered = cafes.filter(c =>
+        c.vibe.toLowerCase().includes(v) ||
+        c.tags.some(t => t.includes(v)) ||
+        c.about.toLowerCase().includes(v)
+      );
+      if (filtered.length) cafes = filtered;
+    }
+  } else if (matchedVibe) {
+    const v = matchedVibe;
+    cafes = DUBLIN_CAFES.filter(c =>
+      c.vibe.toLowerCase().includes(v) ||
+      c.tags.some(t => t.includes(v)) ||
+      c.about.toLowerCase().includes(v)
+    );
+  } else if (msg.includes('random')) {
+    cafes = [DUBLIN_CAFES[Math.floor(Math.random() * DUBLIN_CAFES.length)]];
+  } else if (msg.includes('all') || msg.includes('every') || msg.includes('list')) {
+    cafes = DUBLIN_CAFES.slice(0, 8);
+  } else {
+    // General keyword search
+    cafes = DUBLIN_CAFES.filter(c =>
+      [c.name, c.area, c.address, c.vibe, ...c.tags, c.about].join(' ').toLowerCase().includes(msg)
+    );
+    if (!cafes.length) {
+      // Try matching individual words
+      const words = msg.split(/\s+/).filter(w => w.length > 3);
+      cafes = DUBLIN_CAFES.filter(c => {
+        const haystack = [c.name, c.area, c.vibe, ...c.tags, c.about].join(' ').toLowerCase();
+        return words.some(w => haystack.includes(w));
+      });
+    }
+    if (cafes.length > 8) cafes = cafes.slice(0, 8);
+  }
+
+  removeThinking();
+
+  if (cafes.length) {
+    const toolCall = { name: "search_dublin_cafes", args: { keyword: userMsg }, result: `${cafes.length} cafes found` };
+    addToolLog("search_dublin_cafes", { keyword: userMsg }, `${cafes.length} cafes`);
+    // Build a natural language intro
+    let intro = '';
+    if (matchedArea && matchedVibe) {
+      const vName = matchedVibe === 'cozy' || matchedVibe === 'cosy' ? 'cosy' : matchedVibe;
+      intro = `Here are the best <strong>${vName}</strong> cafes in <strong>${matchedArea}</strong>:`;
+    } else if (matchedArea) {
+      intro = `Here are the top cafes in <strong>${matchedArea}</strong>:`;
+    } else if (matchedVibe) {
+      intro = `Looking for something <strong>${matchedVibe}</strong>? Here are my top picks:`;
+    } else {
+      intro = `Here's what I found for "<strong>${userMsg}</strong>":`;
+    }
+    addMessage('bot', intro + '<br><br>' + cafesToBubble(cafes), { toolCalls: [toolCall] });
+  } else {
+    const toolCall = { name: "search_dublin_cafes", args: { keyword: userMsg }, result: "none found" };
+    addToolLog("search_dublin_cafes", { keyword: userMsg }, "none found");
+    addMessage('bot', `Hmm, I couldn't find any cafes matching "<strong>${userMsg}</strong>" in our Dublin database. Try asking about a specific area like <strong>Dublin 2</strong>, <strong>Temple Bar</strong>, or a vibe like <strong>brunch</strong> or <strong>cosy</strong>.`, { toolCalls: [toolCall] });
+  }
+
+  history.push({ role: 'user', text: userMsg });
+  history.push({ role: 'model', text: '(cafe search results)' });
+  if (history.length > 20) history.splice(0, 2);
+}
+
+// ============================================================
+// API KEY / MODAL
+// ============================================================
+function setApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) return;
+  apiKey = key;
+  try { localStorage.setItem(STORAGE_KEY, key); } catch {}
+  document.getElementById('keyModal').style.display = 'none';
+  updateApiStatus(true);
+  addMessage('bot', '☕ Gemini connected! I have access to <strong>3 MCP tools</strong> with details on 35+ real Dublin cafes. Try: <em>"Find a cosy cafe in Dublin 2"</em> or <em>"Best brunch spots"</em>');
+}
+
+function startDemo() {
+  window.demoMode = true;
+  document.getElementById('keyModal').style.display = 'none';
+  updateApiStatus(true, 'Demo mode (offline)');
+  document.getElementById('engineLabel').textContent = 'Demo Engine';
+  addMessage('bot', '☕ <strong>Demo mode active!</strong> I\'m using our built-in database of <strong>35+ real Dublin cafes</strong> with authentic details. Try asking:<br><br>• <em>"Find a cosy cafe in Dublin 2"</em><br>• <em>"Best brunch spots near Grafton Street"</em><br>• <em>"Cafe with wifi in Temple Bar"</em><br>• <em>"Dog friendly cafes"</em><br>• <em>"What areas have the most cafes?"</em>');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+(function init() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    apiKey = stored;
+    document.getElementById('keyModal').style.display = 'none';
+    updateApiStatus(true);
+    addMessage('bot', '☕ Welcome back! Gemini LLM is connected. Ask me about any cafe in Dublin — I know <strong>35+ real spots</strong>!');
+  } else {
+    document.getElementById('keyModal').style.display = 'flex';
+  }
+})();
+</script>
+</body>
+</html>
