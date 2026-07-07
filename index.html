@@ -54,7 +54,7 @@
     line-height: 1.5;
   }
 
-  /* ── Zomato-Inspired Landing Page ── */
+  /* ── Zomato-Inspired Landing Page (50/50 Split) ── */
   #landing {
     position: fixed; inset: 0;
     z-index: 200;
@@ -65,75 +65,86 @@
   #landing.hidden { opacity: 0; transform: scale(1.02); pointer-events: none; transition-delay: 0.1s; }
 
   .landing-hero-img {
-    flex: 1; position: relative; overflow: hidden;
+    height: 50vh; min-height: 240px; position: relative; overflow: hidden;
     background: url('https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1920&q=80') center 40%/cover no-repeat;
   }
   .landing-hero-img::after {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.2) 100%);
+    background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.25) 100%);
   }
 
   .landing-info {
+    flex: 1; min-height: 0;
     background: #fff;
-    padding: 1rem 2rem 1.2rem;
-    display: flex; justify-content: center;
-    border-top: 1px solid var(--border-light);
+    display: flex; justify-content: center; align-items: center;
+    padding: 1.5rem 2.5rem;
   }
   .landing-info-inner {
-    max-width: 680px; width: 100%;
-    display: flex; align-items: center; justify-content: space-between; gap: 2rem;
+    max-width: 720px; width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 2.5rem;
   }
 
-  .landing-info-left { display: flex; flex-direction: column; gap: 0.15rem; }
+  .landing-info-left { display: flex; flex-direction: column; gap: 0.3rem; }
   .landing-info-left .rating-row {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 0.1rem;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 0.15rem;
   }
   .landing-info-left .rating-row .r-circle {
     display: inline-flex; align-items: center; justify-content: center; gap: 2px;
-    width: 38px; height: 38px;
+    width: 52px; height: 52px;
     background: var(--ta-green); color: #fff;
     border-radius: 50%;
-    font-size: 0.75rem; font-weight: 700; font-family: var(--font-mono);
+    font-size: 1rem; font-weight: 700; font-family: var(--font-mono);
+    animation: rPulse 2.5s ease-in-out infinite;
   }
-  .landing-info-left .rating-row .r-circle .star { font-size: 0.55rem; }
+  @keyframes rPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .landing-info-left .rating-row .r-circle .star { font-size: 0.65rem; }
   .landing-info-left .rating-row .r-meta { display: flex; flex-direction: column; line-height: 1.3; }
-  .landing-info-left .rating-row .r-meta .r-val { font-size: 0.65rem; font-weight: 600; color: var(--ta-green); }
-  .landing-info-left .rating-row .r-meta .r-label { font-size: 0.5rem; color: var(--muted); font-weight: 400; }
+  .landing-info-left .rating-row .r-meta .r-val { font-size: 0.95rem; font-weight: 600; color: var(--ta-green); }
+  .landing-info-left .rating-row .r-meta .r-label { font-size: 0.7rem; color: var(--muted); font-weight: 400; }
   .landing-info-left .r-title {
     font-family: var(--font-display);
-    font-size: 1.5rem; font-weight: 700; color: var(--text);
-    line-height: 1.2;
+    font-size: 2.4rem; font-weight: 700; color: var(--text);
+    line-height: 1.15;
   }
   .landing-info-left .r-title span { color: var(--gold); }
   .landing-info-left .r-sub {
-    display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: center;
-    font-size: 0.58rem; color: var(--muted); font-weight: 400;
+    display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center;
+    font-size: 0.72rem; color: var(--muted); font-weight: 400; margin-top: 0.1rem;
   }
   .landing-info-left .r-sub .sep { color: var(--border); }
   .landing-info-left .r-sub .pill {
-    background: var(--bg); padding: 1px 6px; border-radius: 3px;
-    border: 1px solid var(--border-light); color: var(--text-secondary); font-size: 0.52rem;
+    background: var(--bg); padding: 2px 8px; border-radius: 4px;
+    border: 1px solid var(--border-light); color: var(--text-secondary); font-size: 0.64rem;
   }
 
-  .landing-info-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; flex-shrink: 0; }
+  .landing-info-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; flex-shrink: 0; }
   .landing-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 0.5rem 1.3rem; border: none; border-radius: 6px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 0.75rem 1.8rem; border: none; border-radius: 8px;
     background: var(--ta-green); color: #fff;
-    font-family: var(--font-body); font-size: 0.72rem; font-weight: 600;
-    cursor: pointer; transition: 0.15s;
+    font-family: var(--font-body); font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     letter-spacing: 0.02em;
+    position: relative; overflow: hidden;
   }
-  .landing-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
-  .landing-btn svg { width: 11px; height: 11px; }
+  .landing-btn::after {
+    content: ''; position: absolute; top: 0; left: -60%; width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.6s;
+  }
+  .landing-btn:hover::after { left: 110%; }
+  .landing-btn:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,170,108,0.25); }
+  .landing-btn:active { transform: translateY(0); }
+  .landing-btn svg { width: 14px; height: 14px; }
 
   .landing-powered {
-    font-size: 0.48rem; color: var(--muted); text-align: right;
+    font-size: 0.58rem; color: var(--muted); text-align: right;
     letter-spacing: 0.03em; font-weight: 400; line-height: 1.6;
   }
   .landing-powered strong { color: var(--text-secondary); font-weight: 500; }
   .landing-skip {
-    font-size: 0.48rem; color: var(--muted); background: none; border: none;
+    font-size: 0.58rem; color: var(--muted); background: none; border: none;
     cursor: pointer; text-decoration: underline; text-decoration-style: dotted;
     text-underline-offset: 2px; transition: 0.2s; font-family: var(--font-body);
     padding: 0;
@@ -150,7 +161,7 @@
   #app::before {
     content: ''; position: fixed; inset: 0; z-index: -1;
     background: url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1920&q=80') center 30%/cover no-repeat;
-    opacity: 0.035;
+    opacity: 0.08;
     pointer-events: none;
   }
 
@@ -529,9 +540,10 @@
     .msg { max-width: 95%; }
   }
   @media (max-width: 768px) {
-    .landing-info-inner { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
-    .landing-info { padding: 0.8rem 1rem 1rem; }
-    .landing-info-left .r-title { font-size: 1.2rem; }
+    .landing-info-inner { flex-direction: column; align-items: flex-start; gap: 0.8rem; }
+    .landing-info { padding: 1rem 1.2rem; }
+    .landing-info-left .r-title { font-size: 1.6rem; }
+    .landing-info-left .rating-row .r-circle { width: 42px; height: 42px; font-size: 0.85rem; }
     .landing-info-right { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
     .cafe-card .cc-thumb { width: 60px; min-height: 60px; font-size: 1.5rem; }
     .cafe-card .cc-details { grid-template-columns: 1fr; }
@@ -542,11 +554,12 @@
     .modal { padding: 1.5rem; }
     .header-right .api-status { display: none; }
     .chat-messages:empty::after { font-size: 0.7rem; padding: 1.5rem 1rem; }
-    .landing-info-left .r-title { font-size: 1rem; }
-    .landing-info-left .r-sub .pill { font-size: 0.48rem; padding: 0 4px; }
-    .landing-info-left .rating-row .r-circle { width: 30px; height: 30px; font-size: 0.6rem; }
-    .landing-info-left .rating-row .r-meta .r-label { font-size: 0.45rem; }
-    .landing-hero-img { background-position: center 30%; }
+    .landing-info-left .r-title { font-size: 1.2rem; }
+    .landing-info-left .r-sub .pill { font-size: 0.52rem; }
+    .landing-info-left .rating-row .r-circle { width: 34px; height: 34px; font-size: 0.65rem; }
+    .landing-info-left .rating-row .r-meta .r-label { font-size: 0.5rem; }
+    .landing-info-left .rating-row .r-meta .r-val { font-size: 0.7rem; }
+    .landing-hero-img { height: 35vh; min-height: 180px; }
     .cafe-card .cc-thumb { display: none; }
   }
 </style>
