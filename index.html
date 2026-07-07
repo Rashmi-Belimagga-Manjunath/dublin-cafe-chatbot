@@ -815,8 +815,12 @@ const MCP_HANDLERS = {
   }
 };
 
+function getCostPerPerson(price) {
+  const map = { '€': '€5–10', '€€': '€10–20', '€€€': '€20–35' };
+  return map[price] || price;
+}
 function formatCafeShort(c) {
-  return { name: c.name, area: c.area, vibe: c.vibe, tags: c.tags, rating: c.rating, price: c.price, about: c.about.substring(0, 100) + '...', address: c.address, phone: c.phone || '', website: c.website || '', wifi: c.wifi, dogFriendly: c.dogFriendly, brunch: c.brunch, hours: c.hours, outdoor: c.outdoor };
+  return { name: c.name, area: c.area, vibe: c.vibe, tags: c.tags, rating: c.rating, price: c.price, costPerPerson: getCostPerPerson(c.price), about: c.about.substring(0, 100) + '...', address: c.address, phone: c.phone || '', website: c.website || '', wifi: c.wifi, dogFriendly: c.dogFriendly, brunch: c.brunch, hours: c.hours, outdoor: c.outdoor };
 }
 function formatCafeFull(c) { return { ...formatCafeShort(c), hours: c.hours, about: c.about }; }
 
@@ -883,7 +887,7 @@ function cafeToHTML(cafe) {
           <span class="cc-rating"><span class="star">★</span> ${cafe.rating}</span>
           <span class="cc-revcount">${renderStars(cafe.rating)}</span>
         </div>
-        <div class="cc-price-area">${cafe.price} <span class="sep">·</span> ${cafe.area} <span class="sep">·</span> ${cafe.vibe.split(',')[0]}</div>
+        <div class="cc-price-area">${cafe.price} <span class="sep">·</span> ${cafe.costPerPerson || cafe.price} <span class="sep">·</span> ${cafe.area} <span class="sep">·</span> ${cafe.vibe.split(',')[0]}</div>
         <div class="cc-tags-row">${cafe.tags.slice(0,3).map(t => `<span>${t}</span>`).join('')}</div>
       </div>
     </div>
