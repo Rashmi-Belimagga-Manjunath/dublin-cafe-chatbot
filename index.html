@@ -4,30 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dublin Cafe Chatbot — AI + MCP</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #0f0b08;
-    --bg-surface: #16110d;
-    --bg-card: rgba(22, 17, 13, 0.85);
-    --bg-elevated: #1e1813;
-    --text: #ede8e0;
-    --text-secondary: #a09888;
-    --muted: #6b6258;
-    --gold: #c8a45c;
-    --gold-light: #e0c88a;
-    --gold-dim: rgba(200, 164, 92, 0.06);
-    --gold-glow: rgba(200, 164, 92, 0.08);
+    --bg: #e8e2d8;
+    --bg-surface: rgba(255,255,255,0.6);
+    --bg-card: rgba(255,255,255,0.55);
+    --bg-elevated: rgba(255,255,255,0.7);
+    --text: #2a2520;
+    --text-secondary: #6b6258;
+    --muted: #999082;
+    --gold: #b8893a;
+    --gold-light: #d4a85c;
+    --gold-dim: rgba(184,137,58,0.06);
+    --gold-glow: rgba(184,137,58,0.08);
     --amber: #d4933a;
-    --border: rgba(255, 255, 255, 0.04);
-    --border-light: rgba(255, 255, 255, 0.06);
-    --border-gold: rgba(200, 164, 92, 0.12);
-    --shadow-sm: 0 2px 20px rgba(0, 0, 0, 0.25);
-    --shadow-md: 0 8px 40px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.35);
+    --border: rgba(0,0,0,0.04);
+    --border-light: rgba(0,0,0,0.06);
+    --border-gold: rgba(184,137,58,0.15);
+    --shadow-sm: 0 2px 16px rgba(0,0,0,0.04);
+    --shadow-md: 0 8px 32px rgba(0,0,0,0.05);
+    --shadow-lg: 0 20px 60px rgba(0,0,0,0.06);
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 16px;
@@ -50,18 +51,35 @@
     display: flex;
     flex-direction: column;
     letter-spacing: 0.01em;
+    position: relative;
+  }
+
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .content-overlay {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
   }
 
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 6px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.1); }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.06); border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.1); }
 
   /* ── Top Bar ── */
   .top-bar {
-    background: rgba(0,0,0,0.3);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255,255,255,0.5);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     border-bottom: 1px solid var(--border);
     color: var(--muted);
     font-size: 0.68rem;
@@ -78,13 +96,13 @@
     justify-content: space-between;
     align-items: center;
   }
-  .top-bar a { color: var(--gold-light); text-decoration: none; transition: 0.25s; }
-  .top-bar a:hover { color: #fff; }
+  .top-bar a { color: var(--gold); text-decoration: none; transition: 0.25s; }
+  .top-bar a:hover { color: #7a5f2a; }
   .top-bar .tb-brand { color: var(--text-secondary); font-weight: 500; }
 
   /* ── Header ── */
   .site-header {
-    background: rgba(22, 17, 13, 0.6);
+    background: rgba(255,255,255,0.4);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border-bottom: 1px solid var(--border);
@@ -105,8 +123,8 @@
     border-radius: 50%;
     background: linear-gradient(135deg, var(--gold), var(--amber));
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.85rem; color: #0f0b08;
-    box-shadow: 0 0 20px rgba(200, 164, 92, 0.15);
+    font-size: 0.85rem; color: #fff;
+    box-shadow: 0 0 20px rgba(184,137,58,0.15);
   }
   .logo-text {
     font-family: var(--font-display);
@@ -125,7 +143,7 @@
   .api-status .dot {
     width: 5px; height: 5px; border-radius: 50%; display: inline-block;
   }
-  .api-status .dot.on { background: var(--gold); box-shadow: 0 0 8px rgba(200,164,92,0.4); }
+  .api-status .dot.on { background: var(--gold); box-shadow: 0 0 8px rgba(184,137,58,0.4); }
   .api-status .dot.off { background: var(--muted); }
   .reset-link {
     font-size: 0.58rem; color: var(--muted); cursor: pointer;
@@ -168,15 +186,15 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 0.7rem; margin-top: 2px;
   }
-  .msg.user .avatar { background: linear-gradient(135deg, var(--gold), var(--amber)); color: #0f0b08; }
-  .msg.bot .avatar { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--gold); }
+  .msg.user .avatar { background: linear-gradient(135deg, var(--gold), var(--amber)); color: #fff; }
+  .msg.bot .avatar { background: rgba(255,255,255,0.7); border: 1px solid var(--border); color: var(--gold); }
   .msg .bubble {
     padding: 0.65rem 0.85rem; border-radius: var(--radius-md);
     font-size: 0.82rem; line-height: 1.6; font-weight: 300;
   }
   .msg.user .bubble {
-    background: linear-gradient(135deg, rgba(200,164,92,0.12), rgba(212,147,58,0.05));
-    border: 1px solid rgba(200,164,92,0.1);
+    background: linear-gradient(135deg, rgba(184,137,58,0.1), rgba(212,147,58,0.04));
+    border: 1px solid rgba(184,137,58,0.08);
     color: var(--text);
     border-bottom-right-radius: 4px;
   }
@@ -184,20 +202,22 @@
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-bottom-left-radius: 4px;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
   .msg.bot .bubble code {
     font-family: var(--font-mono); font-size: 0.75rem;
     background: var(--gold-dim); padding: 0.1rem 0.3rem;
     border-radius: 3px; color: var(--gold);
   }
-  .msg.bot .bubble strong { color: var(--gold-light); font-weight: 500; }
+  .msg.bot .bubble strong { color: var(--gold); font-weight: 500; }
   .msg.bot .bubble em { color: var(--text-secondary); font-style: italic; }
 
   /* ── Cafe Card ── */
   .cafe-card {
-    background: linear-gradient(135deg, rgba(30, 24, 19, 0.8), rgba(22, 17, 13, 0.9));
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 0.65rem 0.75rem;
@@ -206,24 +226,17 @@
     gap: 10px;
     align-items: flex-start;
     transition: 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-    position: relative;
-  }
-  .cafe-card::before {
-    content: '';
-    position: absolute; inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(135deg, rgba(200,164,92,0.03), transparent);
-    pointer-events: none;
   }
   .cafe-card:hover {
     border-color: var(--border-gold);
     transform: translateX(2px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
   }
   .cafe-card .cc-icon {
     font-size: 1.2rem; flex-shrink: 0; line-height: 1.2; margin-top: 1px;
   }
-  .cafe-card .cc-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
+  .cafe-card .cc-body { flex: 1; min-width: 0; }
   .cafe-card .cc-name {
     font-weight: 500; font-size: 0.82rem; color: var(--text);
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -240,21 +253,21 @@
   .cafe-card .cc-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px; }
   .cafe-card .cc-tags span {
     font-size: 0.55rem; padding: 1px 6px; border-radius: 3px;
-    background: rgba(200,164,92,0.04);
+    background: rgba(184,137,58,0.04);
     color: var(--gold); font-family: var(--font-mono);
     letter-spacing: 0.02em;
-    border: 1px solid rgba(200,164,92,0.06);
+    border: 1px solid rgba(184,137,58,0.06);
   }
   .cafe-card .cc-info {
     font-size: 0.65rem; color: var(--muted); margin-top: 3px;
     font-weight: 300; line-height: 1.4;
   }
-  .cafe-card .cc-info a { color: var(--gold-light); }
+  .cafe-card .cc-info a { color: var(--gold); }
 
   /* ── Tool Call ── */
   .tool-call {
-    background: rgba(200,164,92,0.02);
-    border: 1px solid rgba(200,164,92,0.06);
+    background: rgba(184,137,58,0.02);
+    border: 1px solid rgba(184,137,58,0.06);
     border-radius: var(--radius-sm);
     padding: 0.45rem 0.65rem;
     margin: 0.35rem 0;
@@ -268,17 +281,17 @@
   }
   .tool-call .tc-h .spin {
     display: inline-block; width: 9px; height: 9px;
-    border: 2px solid rgba(200,164,92,0.1); border-top-color: var(--gold);
+    border: 2px solid rgba(184,137,58,0.1); border-top-color: var(--gold);
     border-radius: 50%; animation: tSpin 0.6s linear infinite;
   }
   @keyframes tSpin { to { transform: rotate(360deg); } }
   .tool-call .tc-body { color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.65rem; white-space: pre-wrap; }
-  .tool-call .tc-result { margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid rgba(200,164,92,0.06); color: var(--text); font-family: var(--font-mono); font-size: 0.65rem; }
+  .tool-call .tc-result { margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid rgba(184,137,58,0.06); color: var(--text); font-family: var(--font-mono); font-size: 0.65rem; }
 
   /* ── Chat Input ── */
   .chat-input-wrap {
     display: flex; gap: 0; margin-top: 0.6rem;
-    background: rgba(22, 17, 13, 0.8);
+    background: var(--bg-elevated);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--border);
@@ -289,8 +302,8 @@
     flex-shrink: 0;
   }
   .chat-input-wrap:focus-within {
-    border-color: rgba(200,164,92,0.15);
-    box-shadow: 0 2px 24px rgba(200,164,92,0.03), 0 0 0 1px rgba(200,164,92,0.03);
+    border-color: rgba(184,137,58,0.15);
+    box-shadow: 0 2px 24px rgba(184,137,58,0.03), 0 0 0 1px rgba(184,137,58,0.03);
   }
   .chat-input-wrap input {
     flex: 1; padding: 0.7rem 1rem; border: none; outline: none;
@@ -301,12 +314,12 @@
   .chat-input-wrap button {
     padding: 0 1.1rem; border: none;
     background: linear-gradient(135deg, var(--gold), var(--amber));
-    color: #0f0b08;
+    color: #fff;
     font-family: var(--font-body); font-size: 0.75rem;
     font-weight: 600; cursor: pointer; transition: 0.3s;
     letter-spacing: 0.02em;
   }
-  .chat-input-wrap button:hover { filter: brightness(1.12); }
+  .chat-input-wrap button:hover { filter: brightness(1.1); }
   .chat-input-wrap button:disabled { opacity: 0.35; cursor: default; }
 
   /* ── Suggestions ── */
@@ -314,20 +327,22 @@
   .suggestions button {
     font-family: var(--font-body); font-size: 0.62rem;
     padding: 0.2rem 0.65rem; border-radius: 100px;
-    border: 1px solid var(--border); background: rgba(22, 17, 13, 0.5);
-    color: var(--text-secondary); cursor: pointer; transition: 0.25s;
-    font-weight: 300; backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.35);
+    backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    color: var(--text-secondary); cursor: pointer; transition: 0.25s;
+    font-weight: 300;
   }
   .suggestions button:hover {
-    border-color: rgba(200,164,92,0.12); color: var(--gold);
-    background: rgba(200,164,92,0.03);
+    border-color: rgba(184,137,58,0.12); color: var(--gold);
+    background: rgba(184,137,58,0.03);
   }
 
   /* ── MCP Panel ── */
   .mcp-panel { display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; }
   .mcp-card {
-    background: rgba(22, 17, 13, 0.7);
+    background: rgba(255,255,255,0.45);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--border);
@@ -335,7 +350,7 @@
     overflow: hidden;
     transition: 0.3s;
   }
-  .mcp-card:hover { border-color: var(--border-light); }
+  .mcp-card:hover { background: rgba(255,255,255,0.55); }
   .mcp-card .mc-h {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0.6rem 0.8rem;
@@ -348,8 +363,8 @@
     width: 4px; height: 4px; border-radius: 50%; display: inline-block;
     animation: pulse 1.5s ease-in-out infinite; margin-right: 4px;
   }
-  .mcp-card .mc-h .live.gold { background: var(--gold); box-shadow: 0 0 6px rgba(200,164,92,0.3); }
-  .mcp-card .mc-h .live.green { background: var(--gold-light); box-shadow: 0 0 6px rgba(200,164,92,0.2); }
+  .mcp-card .mc-h .live.gold { background: var(--gold); box-shadow: 0 0 6px rgba(184,137,58,0.3); }
+  .mcp-card .mc-h .live.green { background: var(--gold); box-shadow: 0 0 6px rgba(184,137,58,0.2); }
   @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
   .mcp-card .mc-body { padding: 0.65rem 0.8rem; font-size: 0.7rem; line-height: 1.5; }
   .mcp-card .mc-body pre {
@@ -376,7 +391,7 @@
   /* ── Modal ── */
   .modal-overlay {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.65);
+    background: rgba(0,0,0,0.2);
     z-index: 100;
     display: flex; align-items: center; justify-content: center;
     backdrop-filter: blur(8px);
@@ -385,8 +400,10 @@
   }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   .modal {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-light);
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255,255,255,0.3);
     border-radius: var(--radius-xl);
     padding: 2rem;
     max-width: 480px; width: 90%;
@@ -397,25 +414,25 @@
   .modal p { font-size: 0.8rem; color: var(--text-secondary); font-weight: 300; margin-bottom: 1rem; line-height: 1.6; }
   .modal input {
     width: 100%; padding: 0.65rem 0.85rem;
-    border: 1px solid var(--border-light);
+    border: 1px solid rgba(0,0,0,0.06);
     border-radius: var(--radius-sm);
-    background: var(--bg-surface);
+    background: rgba(255,255,255,0.5);
     font-family: var(--font-body);
     font-size: 0.82rem; outline: none;
     transition: 0.3s; margin-bottom: 0.5rem;
     color: var(--text); font-weight: 300;
   }
-  .modal input:focus { border-color: rgba(200,164,92,0.2); }
+  .modal input:focus { border-color: rgba(184,137,58,0.2); }
   .modal .modal-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.5rem; }
   .modal .btn {
     padding: 0.5rem 1.2rem; border-radius: var(--radius-sm);
     border: none; font-family: var(--font-body);
     font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: 0.25s;
   }
-  .modal .btn.primary { background: linear-gradient(135deg, var(--gold), var(--amber)); color: #0f0b08; font-weight: 600; }
+  .modal .btn.primary { background: linear-gradient(135deg, var(--gold), var(--amber)); color: #fff; font-weight: 600; }
   .modal .btn.primary:hover { filter: brightness(1.1); }
-  .modal .btn.sec { background: rgba(255,255,255,0.02); border: 1px solid var(--border); color: var(--text-secondary); }
-  .modal .btn.sec:hover { border-color: rgba(200,164,92,0.12); color: var(--gold); }
+  .modal .btn.sec { background: rgba(255,255,255,0.2); border: 1px solid rgba(0,0,0,0.06); color: var(--text-secondary); }
+  .modal .btn.sec:hover { border-color: rgba(184,137,58,0.12); color: var(--gold); }
   .modal .note { font-size: 0.65rem; color: var(--muted); margin-top: 0.5rem; line-height: 1.5; }
   .modal .note a { color: var(--gold); }
 
