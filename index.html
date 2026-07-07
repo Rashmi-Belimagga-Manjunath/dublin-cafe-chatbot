@@ -967,7 +967,7 @@ async function openaiCall(userMsg) {
   let toolCallsInMsg = [];
   const systemMsg = 'You are a Dublin cafe expert AI assistant with MCP tools for 35+ real Dublin cafes. Be friendly and enthusiastic. Use "we" as a local. Present cafes warmly.';
   const tools = MCP_TOOLS.map(t => ({ type:'function', function:{ name:t.name, description:t.description, parameters:t.parameters } }));
-  let messages = [{ role:'system', content:systemMsg }, ...history.map(m => ({ role:m.role, content:m.text })), { role:'user', content:userMsg }];
+  let messages = [{ role:'system', content:systemMsg }, ...history.map(m => ({ role:m.role, content:m.content || '' })), { role:'user', content:userMsg }];
   let finalText = '';
   for (let turn = 0; turn < 4; turn++) {
     const body = { model:OPENAI_MODEL, messages, tools, tool_choice:'auto' };
@@ -984,7 +984,7 @@ async function openaiCall(userMsg) {
         const cafes = result.cafes || (result.cafe ? [result.cafe] : []);
         const info = result.areas ? `${result.areas.length} areas` : `${cafes.length} cafes found`;
         addToolLog(name, args, info); toolCallsInMsg.push({ name, args, result: info });
-        messages.push({ role:'assistant', content:null, tool_calls:[tc] });
+        messages.push({ role:'assistant', content:'', tool_calls:[tc] });
         messages.push({ role:'tool', tool_call_id:tc.id, content:JSON.stringify(result) });
       }
     } else if (msg.content) { finalText = msg.content; break; } else break;
