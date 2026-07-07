@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dublin Cafe Chatbot — AI + MCP</title>
+<title>Dublin Cafe AI — LLM + MCP Cafe Finder</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -48,27 +48,171 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     height: 100vh;
-    display: flex;
-    flex-direction: column;
+    overflow: hidden;
     letter-spacing: 0.01em;
-    position: relative;
   }
 
+  /* ── Landing Page ── */
+  #landing {
+    position: fixed; inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  #landing.hidden {
+    opacity: 0;
+    transform: scale(1.02);
+    pointer-events: none;
+  }
+  #landing.hidden { transition-delay: 0.1s; }
+
+  .landing-scene {
+    position: absolute; inset: 0;
+    z-index: 0;
+  }
+  .landing-scene canvas { display: block; width: 100%; height: 100%; }
+
+  .landing-overlay {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    width: 100%;
+    pointer-events: none;
+  }
+  .landing-overlay * { pointer-events: auto; }
+
+  .landing-card {
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: var(--radius-xl);
+    padding: 3rem 3.5rem;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.04);
+    animation: landCardIn 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  @keyframes landCardIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .landing-icon {
+    font-size: 2.8rem;
+    margin-bottom: 0.5rem;
+    display: block;
+    animation: landIconFloat 3s ease-in-out infinite;
+  }
+  @keyframes landIconFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .landing-title {
+    font-family: var(--font-display);
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    margin-bottom: 0.6rem;
+  }
+  .landing-title span { color: var(--gold); }
+  .landing-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.7;
+    margin-bottom: 1.8rem;
+    max-width: 380px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .landing-subtitle strong { color: var(--text); font-weight: 500; }
+
+  .landing-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.8rem 2.2rem;
+    border: none;
+    border-radius: 100px;
+    background: linear-gradient(135deg, var(--gold), var(--amber));
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 24px rgba(184,137,58,0.25);
+  }
+  .landing-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(184,137,58,0.35);
+    filter: brightness(1.08);
+  }
+  .landing-btn:active {
+    transform: translateY(0);
+  }
+
+  .landing-powered {
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 1.2rem;
+    letter-spacing: 0.06em;
+    font-weight: 400;
+    text-transform: uppercase;
+  }
+  .landing-powered strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .landing-skip {
+    font-size: 0.6rem;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+    transition: 0.2s;
+    font-family: var(--font-body);
+  }
+  .landing-skip:hover { color: var(--gold); }
+
+  /* ── Particles Background (for chat mode) ── */
   #bg-canvas {
     position: fixed;
     top: 0; left: 0;
     width: 100vw; height: 100vh;
     z-index: 0;
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 1s ease;
   }
+  #bg-canvas.visible { opacity: 1; }
 
-  .content-overlay {
+  /* ── App (chat) ── */
+  #app {
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
     height: 100vh;
+    opacity: 0;
+    transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  #app.visible { opacity: 1; }
 
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -444,72 +588,113 @@
     .site-header .inner { padding: 0 1rem; }
     .msg { max-width: 95%; }
   }
+  @media (max-width: 768px) {
+    .landing-card { padding: 2rem 1.5rem; }
+    .landing-title { font-size: 2rem; }
+    .landing-icon { font-size: 2.2rem; }
+    .landing-btn { padding: 0.7rem 1.8rem; font-size: 0.82rem; }
+  }
   @media (max-width: 550px) {
     .mcp-panel { grid-template-columns: 1fr; }
     .logo-text { font-size: 1rem; }
     .modal { padding: 1.5rem; }
     .header-right .api-status { display: none; }
     .chat-messages:empty::after { font-size: 0.7rem; padding: 2rem 1rem; }
+    .landing-card { padding: 1.5rem 1.2rem; }
+    .landing-title { font-size: 1.6rem; }
+    .landing-subtitle { font-size: 0.78rem; }
   }
 </style>
 </head>
 <body>
 
-<div class="top-bar">
-  <div class="inner">
-    <div>
-      <span class="tb-brand">Dublin Cafe AI</span>
-      <span style="opacity:0.2">|</span>
-      <span style="color:var(--muted)">LLM + MCP Tools</span>
-    </div>
-    <div>
-      <a href="https://github.com/Rashmi-Belimagga-Manjunath/dublin-cafe-chatbot" target="_blank">GitHub</a>
-      <span style="opacity:0.3;margin:0 0.6rem">·</span>
-      <a href="https://modelcontextprotocol.io" target="_blank">MCP</a>
-      <span style="opacity:0.3;margin:0 0.5rem">·</span>
-      <a href="https://platform.openai.com" target="_blank">OpenAI</a>
-      <span style="opacity:0.3;margin:0 0.5rem">·</span>
-      <a href="https://ai.google.dev" target="_blank">Gemini</a>
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- LANDING PAGE — 3D Coffee Cup Hero Scene                -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="landing">
+  <div class="landing-scene" id="landingScene"></div>
+  <div class="landing-overlay">
+    <div class="landing-card">
+      <span class="landing-icon">☕</span>
+      <h1 class="landing-title">Dublin <span>Cafe AI</span></h1>
+      <p class="landing-subtitle">
+        Discover the perfect brew through AI-powered conversation.
+        Ask about any cafe in Dublin — I know <strong>35+ real spots</strong>.
+      </p>
+      <button class="landing-btn" id="exploreBtn">
+        Explore Cafes
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <div class="landing-powered">Powered by <strong>LLM</strong> · <strong>MCP Tools</strong> · <strong>35+ Cafes</strong></div>
+      <button class="landing-skip" onclick="enterApp()">Enter directly →</button>
     </div>
   </div>
 </div>
 
-<header class="site-header">
-  <div class="inner">
-    <div class="logo">
-      <div class="logo-icon">☕</div>
-      <div class="logo-text">Dublin <span>Cafe AI</span></div>
-    </div>
-    <div class="header-right">
-      <div class="api-status" id="apiStatus">
-        <span class="dot off" id="statusDot"></span>
-        <span id="statusText">No LLM key</span>
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- PARTICLE BACKGROUND (visible in chat mode)             -->
+<!-- ════════════════════════════════════════════════════════ -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- CHAT APPLICATION                                       -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div id="app">
+  <div class="top-bar">
+    <div class="inner">
+      <div>
+        <span class="tb-brand">Dublin Cafe AI</span>
+        <span style="opacity:0.2">|</span>
+        <span style="color:var(--muted)">LLM + MCP Tools</span>
       </div>
-      <span class="reset-link" onclick="resetAndShowModal()">reset</span>
-    </div>
-  </div>
-</header>
-
-<div class="main">
-  <div class="chat-area">
-    <div class="chat-messages" id="chatMessages"></div>
-    <div class="suggestions" id="suggestions">
-      <button onclick="quickSearch('cozy cafe in dublin 2')">☕ Cozy cafe Dublin 2</button>
-      <button onclick="quickSearch('best brunch near grafton street')">🥐 Best brunch</button>
-      <button onclick="quickSearch('cafe with wifi in temple bar')">📶 Cafe with wifi</button>
-      <button onclick="quickSearch('dog friendly cafe dublin')">🐕 Dog friendly</button>
-    </div>
-    <div class="chat-input-wrap" style="margin-top:0.4rem">
-      <input type="text" id="chatInput" placeholder="Ask about any cafe in Dublin..." autofocus onkeydown="if(event.key==='Enter')send()">
-      <button id="sendBtn" onclick="send()">Send</button>
+      <div>
+        <a href="https://github.com/Rashmi-Belimagga-Manjunath/dublin-cafe-chatbot" target="_blank">GitHub</a>
+        <span style="opacity:0.3;margin:0 0.6rem">·</span>
+        <a href="https://modelcontextprotocol.io" target="_blank">MCP</a>
+        <span style="opacity:0.3;margin:0 0.5rem">·</span>
+        <a href="https://platform.openai.com" target="_blank">OpenAI</a>
+        <span style="opacity:0.3;margin:0 0.5rem">·</span>
+        <a href="https://ai.google.dev" target="_blank">Gemini</a>
+      </div>
     </div>
   </div>
 
-  <div class="mcp-panel">
-    <div class="mcp-card">
-      <div class="mc-h"><span><span class="live green"></span> MCP Tools</span></div>
-      <div class="mc-body">
-        <pre>server: "dublin-cafe-mcp"
+  <header class="site-header">
+    <div class="inner">
+      <div class="logo">
+        <div class="logo-icon">☕</div>
+        <div class="logo-text">Dublin <span>Cafe AI</span></div>
+      </div>
+      <div class="header-right">
+        <div class="api-status" id="apiStatus">
+          <span class="dot off" id="statusDot"></span>
+          <span id="statusText">No LLM key</span>
+        </div>
+        <span class="reset-link" onclick="resetAndShowModal()">reset</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="chat-area">
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="suggestions" id="suggestions">
+        <button onclick="quickSearch('cozy cafe in dublin 2')">☕ Cozy cafe Dublin 2</button>
+        <button onclick="quickSearch('best brunch near grafton street')">🥐 Best brunch</button>
+        <button onclick="quickSearch('cafe with wifi in temple bar')">📶 Cafe with wifi</button>
+        <button onclick="quickSearch('dog friendly cafe dublin')">🐕 Dog friendly</button>
+      </div>
+      <div class="chat-input-wrap" style="margin-top:0.4rem">
+        <input type="text" id="chatInput" placeholder="Ask about any cafe in Dublin..." autofocus onkeydown="if(event.key==='Enter')send()">
+        <button id="sendBtn" onclick="send()">Send</button>
+      </div>
+    </div>
+
+    <div class="mcp-panel">
+      <div class="mcp-card">
+        <div class="mc-h"><span><span class="live green"></span> MCP Tools</span></div>
+        <div class="mc-body">
+          <pre>server: "dublin-cafe-mcp"
 protocol: "model-context-protocol"
 version: "1.0.0"
 
@@ -525,23 +710,27 @@ tools:
   get_popular_areas()
     Dublin neighbourhoods with
     top-rated cafe counts</pre>
+        </div>
       </div>
-    </div>
-    <div class="mcp-card">
-      <div class="mc-h"><span>LLM Engine</span> <span class="engine-label" id="engineLabel">Gemini 2.0 Flash</span></div>
-      <div class="mc-body" style="font-size:0.7rem;color:var(--muted);font-weight:300;line-height:1.6" id="engineDesc">
-        The LLM decides when to call MCP tools. Powered by 35+ real Dublin cafes.
+      <div class="mcp-card">
+        <div class="mc-h"><span>LLM Engine</span> <span class="engine-label" id="engineLabel">Gemini 2.0 Flash</span></div>
+        <div class="mc-body" style="font-size:0.7rem;color:var(--muted);font-weight:300;line-height:1.6" id="engineDesc">
+          The LLM decides when to call MCP tools. Powered by 35+ real Dublin cafes.
+        </div>
       </div>
-    </div>
-    <div class="mcp-card" style="flex:1;min-height:0">
-      <div class="mc-h"><span><span class="live gold"></span> Tool Call Log</span></div>
-      <div class="tool-log" id="toolLog">
-        <div class="tl-item" style="color:var(--muted);font-size:0.6rem;justify-content:center;border:none;">No calls yet</div>
+      <div class="mcp-card" style="flex:1;min-height:0">
+        <div class="mc-h"><span><span class="live gold"></span> Tool Call Log</span></div>
+        <div class="tool-log" id="toolLog">
+          <div class="tl-item" style="color:var(--muted);font-size:0.6rem;justify-content:center;border:none;">No calls yet</div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SETUP MODAL                                            -->
+<!-- ════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="keyModal">
   <div class="modal">
     <h2>☕ Dublin Cafe AI</h2>
@@ -613,7 +802,7 @@ const DUBLIN_CAFES = [
 // STATE
 // ============================================================
 let apiKey = '';
-let apiType = 'gemini'; // 'gemini' or 'openai'
+let apiType = 'gemini';
 const STORAGE_KEY = 'dublin-cafe-llm-key';
 const STORAGE_TYPE_KEY = 'dublin-cafe-llm-type';
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
@@ -629,24 +818,12 @@ const MCP_TOOLS = [
   {
     name: 'search_dublin_cafes',
     description: 'Search for real cafes in Dublin by area, vibe, keyword, or features. Uses a comprehensive dataset of 35+ real Dublin cafes with authentic details.',
-    parameters: {
-      type: 'object',
-      properties: {
-        keyword: { type: 'string', description: 'Search keyword like area (e.g. "dublin 2", "temple bar"), vibe (e.g. "cosy", "brunch", "workspace"), or feature (e.g. "wifi", "dog friendly")' }
-      },
-      required: ['keyword']
-    }
+    parameters: { type: 'object', properties: { keyword: { type: 'string', description: 'Search keyword like area (e.g. "dublin 2", "temple bar"), vibe (e.g. "cosy", "brunch", "workspace"), or feature (e.g. "wifi", "dog friendly")' } }, required: ['keyword'] }
   },
   {
     name: 'get_cafe_details',
     description: 'Get full detailed information about a specific Dublin cafe by name or partial name match.',
-    parameters: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', description: 'The cafe name or partial name to look up (e.g. "3FE", "Fumbally", "Brother Hubbard")' }
-      },
-      required: ['name']
-    }
+    parameters: { type: 'object', properties: { name: { type: 'string', description: 'The cafe name or partial name to look up (e.g. "3FE", "Fumbally", "Brother Hubbard")' } }, required: ['name'] }
   },
   {
     name: 'get_popular_areas',
@@ -656,7 +833,7 @@ const MCP_TOOLS = [
 ];
 
 // ============================================================
-// MCP TOOL HANDLERS — real-time cafe search
+// MCP TOOL HANDLERS
 // ============================================================
 const MCP_HANDLERS = {
   search_dublin_cafes: async ({ keyword }) => {
@@ -665,7 +842,6 @@ const MCP_HANDLERS = {
       const searchable = [c.name, c.area, c.address, c.vibe, ...c.tags, c.about].join(' ').toLowerCase();
       return searchable.includes(kw);
     });
-    // Also match by neighbourhood keywords
     const areaMap = { "dublin 1":"Dublin 1","dublin 2":"Dublin 2","dublin 4":"Dublin 4","dublin 6":"Dublin 6","dublin 7":"Dublin 7","dublin 8":"Dublin 8","temple bar":"Dublin 2","grafton street":"Dublin 2","capel street":"Dublin 1","rathmines":"Dublin 6","phibsborough":"Dublin 7","camden street":"Dublin 2","south william street":"Dublin 2","dame street":"Dublin 2","henry street":"Dublin 1","pembroke":"Dublin 4","baggot street":"Dublin 2","harcourt street":"Dublin 2","kildare street":"Dublin 2","poolbeg":"Dublin 2","fade street":"Dublin 2","castle market":"Dublin 2","aungier street":"Dublin 2","drury street":"Dublin 2" };
     for (const [alias, area] of Object.entries(areaMap)) {
       if (kw.includes(alias)) {
@@ -673,20 +849,14 @@ const MCP_HANDLERS = {
         if (areaResults.length) results = areaResults;
       }
     }
-    // Vibe matching
     const vibeMap = { "cozy":"Cosy","cosy":"Cosy","quiet":"Minimalist, Quiet","workspace":"Workspace","laptop":"Workspace-friendly","wifi":"Workspace","brunch":"Brunch","breakfast":"Brunch","dog":"Dog friendly","pet":"Dog friendly","specialty":"Specialty","speciality":"Specialty","rooftop":"Rooftop","outdoor":"Outdoor","hidden":"Hidden","historic":"Historic","elegant":"Elegant","rustic":"Rustic","vegetarian":"Vegetarian","vegan":"Vegetarian","market":"Market","bakery":"Bakery","sweet":"Sweet","chocolate":"Decadent","asian":"Asian","italian":"Italian","tea":"Tea","healthy":"Healthy","creative":"Creative","minimalist":"Minimalist","colourful":"Colourful","colorful":"Colourful","industrial":"Industrial","roastery":"Roastery","friendly":"Friendly","intimate":"Intimate" };
     for (const [alias, vibe] of Object.entries(vibeMap)) {
       if (kw.includes(alias)) {
         const vibeResults = DUBLIN_CAFES.filter(c => c.vibe.toLowerCase().includes(vibe.toLowerCase()) || c.tags.some(t => t.toLowerCase().includes(vibe.toLowerCase())));
         if (vibeResults.length && !results.length) results = vibeResults;
         if (results.length > 1 && vibeResults.length) {
-          // Prioritize vibe matches
           const vibeIds = new Set(vibeResults.map(c => c.name));
-          results.sort((a, b) => {
-            const aVibe = vibeIds.has(a.name) ? -1 : 0;
-            const bVibe = vibeIds.has(b.name) ? -1 : 0;
-            return aVibe - bVibe;
-          });
+          results.sort((a, b) => { const aVibe = vibeIds.has(a.name) ? -1 : 0; const bVibe = vibeIds.has(b.name) ? -1 : 0; return aVibe - bVibe; });
         }
       }
     }
@@ -710,9 +880,7 @@ const MCP_HANDLERS = {
       areas[c.area].total++;
     });
     const result = Object.entries(areas).map(([area, data]) => ({
-      area,
-      cafeCount: data.total,
-      topCafes: data.cafes.slice(0, 4)
+      area, cafeCount: data.total, topCafes: data.cafes.slice(0, 4)
     })).sort((a, b) => b.cafeCount - a.cafeCount);
     return { areas: result };
   }
@@ -901,7 +1069,6 @@ When you get cafe results from the tool, present them warmly. Mention the vibe, 
 
   removeThinking();
 
-  // Try to get final response if we only had function calls
   if (!finalText && toolCallsInMsg.length) {
     const body = { contents: currentContents, tools: [{ functionDeclarations: MCP_TOOLS }] };
     const res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
@@ -914,13 +1081,11 @@ When you get cafe results from the tool, present them warmly. Mention the vibe, 
     }
   }
 
-  // Format the response
   let displayHtml = finalText
     ? finalText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                .replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>')
     : '';
 
-  // If tool calls found cafes but no text, show cafe cards
   if (!displayHtml && toolCallsInMsg.length) {
     const lastArgs = toolCallsInMsg[toolCallsInMsg.length - 1].args;
     if (lastArgs?.keyword) {
@@ -1004,7 +1169,6 @@ async function openaiCall(userMsg) {
 
   removeThinking();
 
-  // Get final response after tool calls if needed
   if (!finalText && toolCallsInMsg.length) {
     const body = { model: OPENAI_MODEL, messages, tools, tool_choice: 'auto' };
     const res = await fetch(OPENAI_ENDPOINT, {
@@ -1046,30 +1210,26 @@ async function openaiCall(userMsg) {
 }
 
 // ============================================================
-// DEMO MODE — works entirely offline with local dataset
+// DEMO MODE
 // ============================================================
 async function demoResponse(userMsg) {
   const msg = userMsg.toLowerCase();
   let cafes = [];
 
-  // Smart matching
   const areaMap = { "dublin 1":"Dublin 1","dublin 2":"Dublin 2","dublin 4":"Dublin 4","dublin 6":"Dublin 6","dublin 7":"Dublin 7","dublin 8":"Dublin 8","temple bar":"Dublin 2","grafton":"Dublin 2","capel street":"Dublin 1","henry street":"Dublin 1","rathmines":"Dublin 6","phibsborough":"Dublin 7","camden":"Dublin 2","dame street":"Dublin 2","south william":"Dublin 2","poolbeg":"Dublin 2","harcourt":"Dublin 2","kildare":"Dublin 2","fade":"Dublin 2","aungier":"Dublin 2","drury":"Dublin 2","cork hill":"Dublin 2","nassau":"Dublin 2","pembroke":"Dublin 4","bath avenue":"Dublin 4","clanbrassil":"Dublin 8","portobello":"Dublin 8","sandyford":"Dublin 18","ballyfermot":"Dublin 10","city centre":"Dublin 2","city center":"Dublin 2","howth":"Dublin 13","killiney":"Dublin 18","dun laoghaire":"Dublin 18","blackrock":"Dublin 18" };
 
   const vibeMap = ["cozy","cosy","quiet","workspace","laptop","wifi","brunch","dog","pet","specialty","speciality","rooftop","outdoor","hidden","historic","rustic","vegetarian","vegan","bakery","sweet","chocolate","healthy","creative","minimalist","colourful","colorful","industrial","roastery","intimate","elegant","romantic","study","meeting","cheap","affordable","best","top","popular","trendy","hipster","family","kid"];
 
-  // Find matching area
   let matchedArea = '';
   for (const [alias, area] of Object.entries(areaMap)) {
     if (msg.includes(alias)) { matchedArea = area; break; }
   }
 
-  // Find matching vibe
   let matchedVibe = '';
   for (const v of vibeMap) {
     if (msg.includes(v)) { matchedVibe = v; break; }
   }
 
-  // Check for list all areas
   if (msg.includes('area') || msg.includes('neighbourhood') || msg.includes('neighborhood') || msg.includes('where to go')) {
     const areas = {};
     DUBLIN_CAFES.forEach(c => {
@@ -1089,7 +1249,6 @@ async function demoResponse(userMsg) {
     return;
   }
 
-  // Filter cafes
   if (matchedArea) {
     cafes = DUBLIN_CAFES.filter(c => c.area === matchedArea);
     if (matchedVibe) {
@@ -1113,12 +1272,10 @@ async function demoResponse(userMsg) {
   } else if (msg.includes('all') || msg.includes('every') || msg.includes('list')) {
     cafes = DUBLIN_CAFES.slice(0, 8);
   } else {
-    // General keyword search
     cafes = DUBLIN_CAFES.filter(c =>
       [c.name, c.area, c.address, c.vibe, ...c.tags, c.about].join(' ').toLowerCase().includes(msg)
     );
     if (!cafes.length) {
-      // Try matching individual words
       const words = msg.split(/\s+/).filter(w => w.length > 3);
       cafes = DUBLIN_CAFES.filter(c => {
         const haystack = [c.name, c.area, c.vibe, ...c.tags, c.about].join(' ').toLowerCase();
@@ -1133,7 +1290,6 @@ async function demoResponse(userMsg) {
   if (cafes.length) {
     const toolCall = { name: "search_dublin_cafes", args: { keyword: userMsg }, result: `${cafes.length} cafes found` };
     addToolLog("search_dublin_cafes", { keyword: userMsg }, `${cafes.length} cafes`);
-    // Build a natural language intro
     let intro = '';
     if (matchedArea && matchedVibe) {
       const vName = matchedVibe === 'cozy' || matchedVibe === 'cosy' ? 'cosy' : matchedVibe;
@@ -1215,23 +1371,424 @@ function startDemo() {
 }
 
 // ============================================================
+// 3D LANDING SCENE — Coffee Cup Illustration
+// ============================================================
+let landingRenderer, landingScene, landingCamera, coffeeCup, steamParticles = [];
+let landingAnimId, particleRenderer, particleScene, particleCamera, particleAnimId;
+
+function initLandingScene() {
+  const container = document.getElementById('landingScene');
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  if (!w || !h) return;
+
+  landingScene = new THREE.Scene();
+
+  landingCamera = new THREE.PerspectiveCamera(35, w / h, 0.1, 100);
+  landingCamera.position.set(4, 2.5, 6);
+  landingCamera.lookAt(0, 0, 0);
+
+  landingRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  landingRenderer.setSize(w, h);
+  landingRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  landingRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  landingRenderer.toneMappingExposure = 1.0;
+  landingRenderer.outputEncoding = THREE.sRGBEncoding;
+  container.appendChild(landingRenderer.domElement);
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x665544, 0.4);
+  landingScene.add(ambient);
+
+  const hemi = new THREE.HemisphereLight(0xffeedd, 0x223344, 0.6);
+  landingScene.add(hemi);
+
+  const keyLight = new THREE.DirectionalLight(0xffd58a, 1.2);
+  keyLight.position.set(6, 8, 4);
+  landingScene.add(keyLight);
+
+  const fillLight = new THREE.DirectionalLight(0x8ab4ff, 0.4);
+  fillLight.position.set(-4, 3, 5);
+  landingScene.add(fillLight);
+
+  const rimLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  rimLight.position.set(-3, 1, -6);
+  landingScene.add(rimLight);
+
+  coffeeCup = buildCoffeeCup();
+  landingScene.add(coffeeCup);
+
+  window.addEventListener('resize', handleLandingResize);
+  animateLanding();
+}
+
+function buildCoffeeCup() {
+  const group = new THREE.Group();
+
+  // Saucer
+  const saucerGeo = new THREE.CylinderGeometry(2.4, 2.6, 0.18, 48);
+  const saucerMat = new THREE.MeshPhysicalMaterial({
+    color: 0xf0ebe3,
+    roughness: 0.3,
+    metalness: 0.05,
+    clearcoat: 0.1,
+    clearcoatRoughness: 0.4
+  });
+  const saucer = new THREE.Mesh(saucerGeo, saucerMat);
+  saucer.position.y = -0.85;
+  group.add(saucer);
+
+  // Saucer inner ring
+  const innerGeo = new THREE.RingGeometry(0.85, 1.1, 32);
+  const innerMat = new THREE.MeshPhysicalMaterial({
+    color: 0xe8e0d4,
+    roughness: 0.4,
+    metalness: 0.02,
+    side: THREE.DoubleSide
+  });
+  const inner = new THREE.Mesh(innerGeo, innerMat);
+  inner.position.y = -0.75;
+  inner.rotation.x = -Math.PI / 2;
+  group.add(inner);
+
+  // Cup body
+  const cupGeo = new THREE.CylinderGeometry(1.1, 0.9, 1.7, 48);
+  const cupMat = new THREE.MeshPhysicalMaterial({
+    color: 0xf5efe6,
+    roughness: 0.15,
+    metalness: 0.05,
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.25
+  });
+  const cup = new THREE.Mesh(cupGeo, cupMat);
+  cup.position.y = 0;
+  group.add(cup);
+
+  // Cup bottom rim
+  const bottomRimGeo = new THREE.TorusGeometry(0.92, 0.045, 12, 32);
+  const bottomRimMat = new THREE.MeshPhysicalMaterial({
+    color: 0xf0ebe3,
+    roughness: 0.2,
+    metalness: 0.05
+  });
+  const bottomRim = new THREE.Mesh(bottomRimGeo, bottomRimMat);
+  bottomRim.position.y = -0.84;
+  bottomRim.rotation.x = Math.PI / 2;
+  group.add(bottomRim);
+
+  // Gold rim
+  const rimGeo = new THREE.TorusGeometry(1.12, 0.06, 20, 48);
+  const rimMat = new THREE.MeshStandardMaterial({
+    color: 0xb8893a,
+    metalness: 0.8,
+    roughness: 0.15
+  });
+  const rim = new THREE.Mesh(rimGeo, rimMat);
+  rim.position.y = 0.85;
+  rim.rotation.x = Math.PI / 2;
+  group.add(rim);
+
+  // Coffee surface
+  const coffeeGeo = new THREE.CircleGeometry(1.02, 48);
+  const coffeeMat = new THREE.MeshStandardMaterial({
+    color: 0x3d2010,
+    roughness: 0.9,
+    metalness: 0.0,
+    side: THREE.DoubleSide
+  });
+  const coffee = new THREE.Mesh(coffeeGeo, coffeeMat);
+  coffee.position.y = 0.86;
+  coffee.rotation.x = -Math.PI / 2;
+  group.add(coffee);
+
+  // Coffee crema (lighter ring on top)
+  const cremaGeo = new THREE.RingGeometry(0.5, 0.95, 48);
+  const cremaMat = new THREE.MeshStandardMaterial({
+    color: 0x6b3a1f,
+    roughness: 0.8,
+    metalness: 0.0,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.4
+  });
+  const crema = new THREE.Mesh(cremaGeo, cremaMat);
+  crema.position.y = 0.87;
+  crema.rotation.x = -Math.PI / 2;
+  group.add(crema);
+
+  // Handle
+  const handleGeo = new THREE.TorusGeometry(0.5, 0.085, 16, 32, Math.PI * 0.65);
+  const handleMat = new THREE.MeshPhysicalMaterial({
+    color: 0xf0ebe3,
+    roughness: 0.15,
+    metalness: 0.05,
+    clearcoat: 0.1
+  });
+  const handle = new THREE.Mesh(handleGeo, handleMat);
+  handle.position.set(1.15, 0.25, 0);
+  handle.rotation.z = 0.15;
+  handle.rotation.y = 0.1;
+  group.add(handle);
+
+  // Steam particles
+  steamParticles = [];
+  for (let i = 0; i < 10; i++) {
+    const size = 0.035 + Math.random() * 0.045;
+    const steamGeo = new THREE.SphereGeometry(size, 8, 8);
+    const steamMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.08 + Math.random() * 0.1
+    });
+    const steam = new THREE.Mesh(steamGeo, steamMat);
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * 0.35;
+    steam.position.set(
+      Math.cos(angle) * radius,
+      0.9 + Math.random() * 0.15,
+      Math.sin(angle) * radius
+    );
+    steam.userData = {
+      speed: 0.15 + Math.random() * 0.25,
+      phase: Math.random() * Math.PI * 2,
+      startY: steam.position.y,
+      startX: steam.position.x,
+      startZ: steam.position.z,
+      driftAmp: 0.1 + Math.random() * 0.15,
+      driftFreq: 0.3 + Math.random() * 0.4
+    };
+    group.add(steam);
+    steamParticles.push(steam);
+  }
+
+  // Coffee beans on saucer
+  const beanPositions = [
+    { angle: 0.3, dist: 1.6, rot: [0.5, 0.2, 0.8] },
+    { angle: 1.8, dist: 1.7, rot: [1.2, 0.8, 0.3] },
+    { angle: 3.0, dist: 1.5, rot: [0.1, 1.0, 0.6] },
+    { angle: 4.5, dist: 1.8, rot: [0.9, 0.3, 1.1] },
+    { angle: 5.8, dist: 1.4, rot: [0.4, 0.7, 0.2] }
+  ];
+  beanPositions.forEach(p => {
+    const beanGeo = new THREE.SphereGeometry(0.07, 8, 8);
+    beanGeo.scale(1, 0.6, 0.7);
+    const beanMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color().setHSL(0.07 + Math.random() * 0.05, 0.4, 0.15 + Math.random() * 0.1),
+      roughness: 0.8,
+      metalness: 0.0
+    });
+    const bean = new THREE.Mesh(beanGeo, beanMat);
+    bean.position.set(
+      Math.cos(p.angle) * p.dist,
+      -0.76,
+      Math.sin(p.angle) * p.dist
+    );
+    bean.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
+    group.add(bean);
+  });
+
+  return group;
+}
+
+function animateLanding() {
+  landingAnimId = requestAnimationFrame(animateLanding);
+
+  if (coffeeCup) {
+    coffeeCup.rotation.y += 0.004;
+    coffeeCup.position.y = Math.sin(Date.now() * 0.0004) * 0.04;
+  }
+
+  const now = Date.now() * 0.001;
+  steamParticles.forEach((s) => {
+    const ud = s.userData;
+    const t = now * ud.speed + ud.phase;
+    s.position.y = ud.startY + Math.sin(t) * 0.35 + Math.cos(t * 0.7) * 0.1;
+    s.position.x = ud.startX + Math.sin(t * ud.driftFreq) * ud.driftAmp;
+    s.position.z = ud.startZ + Math.cos(t * ud.driftFreq * 0.8) * ud.driftAmp;
+    s.material.opacity = 0.06 + Math.sin(t * 0.8) * 0.08;
+  });
+
+  landingRenderer.render(landingScene, landingCamera);
+}
+
+function handleLandingResize() {
+  const container = document.getElementById('landingScene');
+  if (!container) return;
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  if (!w || !h) return;
+  if (landingCamera) {
+    landingCamera.aspect = w / h;
+    landingCamera.updateProjectionMatrix();
+  }
+  if (landingRenderer) {
+    landingRenderer.setSize(w, h);
+  }
+}
+
+// ============================================================
+// PARTICLE BACKGROUND (chat mode)
+// ============================================================
+function initParticleBg() {
+  const canvas = document.getElementById('bg-canvas');
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  particleScene = new THREE.Scene();
+
+  particleCamera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
+  particleCamera.position.z = 15;
+
+  particleRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  particleRenderer.setSize(w, h);
+  particleRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const particlesGeo = new THREE.BufferGeometry();
+  const count = 180;
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const goldColor = new THREE.Color(0xb8893a);
+  const amberColor = new THREE.Color(0xd4933a);
+  const creamColor = new THREE.Color(0xe8dcc8);
+
+  for (let i = 0; i < count; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 40;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 20 - 5;
+
+    const c = Math.random() < 0.5 ? goldColor : Math.random() < 0.5 ? amberColor : creamColor;
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+
+  particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  particlesGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const particleMat = new THREE.PointsMaterial({
+    size: 0.08,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.4,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+
+  const particles = new THREE.Points(particlesGeo, particleMat);
+  particleScene.add(particles);
+
+  window.addEventListener('resize', () => {
+    const w2 = window.innerWidth;
+    const h2 = window.innerHeight;
+    particleCamera.aspect = w2 / h2;
+    particleCamera.updateProjectionMatrix();
+    particleRenderer.setSize(w2, h2);
+  });
+
+  function animateParticles() {
+    particleAnimId = requestAnimationFrame(animateParticles);
+    particles.rotation.y += 0.0003;
+    particleRenderer.render(particleScene, particleCamera);
+  }
+
+  animateParticles();
+}
+
+// ============================================================
+// LANDING → APP TRANSITION
+// ============================================================
+function enterApp() {
+  const landing = document.getElementById('landing');
+  const app = document.getElementById('app');
+  const bgCanvas = document.getElementById('bg-canvas');
+
+  // Stop landing 3D
+  if (landingAnimId) {
+    cancelAnimationFrame(landingAnimId);
+    landingAnimId = null;
+  }
+  if (landingRenderer) {
+    landingRenderer.dispose();
+    landingRenderer = null;
+  }
+
+  // Hide landing
+  landing.classList.add('hidden');
+
+  // Show particle bg
+  bgCanvas.classList.add('visible');
+
+  // Show app
+  app.classList.add('visible');
+
+  // Init particle bg if not done
+  if (!particleRenderer) {
+    initParticleBg();
+  }
+
+  // Focus chat input
+  setTimeout(() => chatInput?.focus(), 600);
+
+  // Show setup modal if no key
+  setTimeout(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored && !window.demoMode) {
+      document.getElementById('keyModal').style.display = 'flex';
+    }
+  }, 800);
+}
+
+// ============================================================
 // INIT
 // ============================================================
 (function init() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    apiKey = stored;
-    apiType = localStorage.getItem(STORAGE_TYPE_KEY) || 'gemini';
-    document.getElementById('keyModal').style.display = 'none';
-    updateApiStatus(true);
-    const label = apiType === 'gemini' ? 'Gemini' : 'OpenAI';
-    document.getElementById('engineLabel').textContent = apiType === 'gemini' ? 'Gemini 2.0 Flash' : 'GPT-4o-mini';
-    document.getElementById('engineDesc').textContent = apiType === 'gemini' ? 'Google Gemini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes.' : 'OpenAI GPT-4o-mini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes.';
-    addMessage('bot', `☕ Welcome back! ${label} LLM is connected. Ask me about any cafe in Dublin — I know <strong>35+ real spots</strong>!`);
-  } else {
-    selectProvider('gemini');
-    document.getElementById('keyModal').style.display = 'flex';
-  }
+  initLandingScene();
+
+  document.getElementById('exploreBtn').addEventListener('click', enterApp);
+
+  // Pre-init particle bg in background for smooth transition
+  setTimeout(() => {
+    if (!particleRenderer && !document.getElementById('landing').classList.contains('hidden')) {
+      // Init but don't show yet — will be made visible on enter
+      const bgCanvas = document.getElementById('bg-canvas');
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      particleScene = new THREE.Scene();
+      particleCamera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
+      particleCamera.position.z = 15;
+      particleRenderer = new THREE.WebGLRenderer({ canvas: bgCanvas, alpha: true, antialias: true });
+      particleRenderer.setSize(w, h);
+      particleRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      const particlesGeo = new THREE.BufferGeometry();
+      const count = 180;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const goldColor = new THREE.Color(0xb8893a);
+      const amberColor = new THREE.Color(0xd4933a);
+      const creamColor = new THREE.Color(0xe8dcc8);
+      for (let i = 0; i < count; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 40;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 20 - 5;
+        const c = Math.random() < 0.5 ? goldColor : Math.random() < 0.5 ? amberColor : creamColor;
+        colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+      }
+      particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      particlesGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      const particleMat = new THREE.PointsMaterial({
+        size: 0.08, vertexColors: true, transparent: true, opacity: 0.4,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      });
+      const particles = new THREE.Points(particlesGeo, particleMat);
+      particleScene.add(particles);
+      function animateParticles() {
+        particleAnimId = requestAnimationFrame(animateParticles);
+        particles.rotation.y += 0.0003;
+        particleRenderer.render(particleScene, particleCamera);
+      }
+      animateParticles();
+    }
+  }, 100);
 })();
 </script>
 </body>
