@@ -1208,7 +1208,18 @@ function enterApp() {
 // ============================================================
 // PRESET API KEY
 // ============================================================
-// (API key is set via the setup modal on first launch)
+(function loadSavedKey() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  const savedType = localStorage.getItem(STORAGE_TYPE_KEY);
+  if (saved) {
+    apiKey = saved;
+    apiType = savedType || 'openai';
+    updateApiStatus(true, apiType === 'gemini' ? 'Gemini ready' : 'OpenAI ready');
+    document.getElementById('engineLabel').textContent = apiType === 'gemini' ? 'Gemini 2.0 Flash' : 'GPT-4o-mini';
+    document.getElementById('engineDesc').textContent = apiType === 'gemini' ? 'Gemini decides when to invoke MCP tools.' : 'OpenAI GPT-4o-mini decides when to invoke MCP tools.';
+    document.getElementById('keyModal').style.display = 'none';
+  }
+})();
 
 // ============================================================
 // INIT
