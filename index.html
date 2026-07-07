@@ -147,6 +147,12 @@
   /* ── App ── */
   #app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; opacity: 0; transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
   #app.visible { opacity: 1; }
+  #app::before {
+    content: ''; position: fixed; inset: 0; z-index: -1;
+    background: url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1920&q=80') center 30%/cover no-repeat;
+    opacity: 0.035;
+    pointer-events: none;
+  }
 
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
