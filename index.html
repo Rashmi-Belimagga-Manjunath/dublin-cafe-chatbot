@@ -418,8 +418,8 @@ tools:
     </div>
     <div class="mcp-card">
       <div class="mc-h"><span>LLM Engine</span> <span id="engineLabel">Gemini 2.0 Flash</span></div>
-      <div class="mc-body" style="font-size:0.72rem;color:var(--text-secondary);font-weight:300">
-        Google Gemini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes with live search augmentation.
+      <div class="mc-body" style="font-size:0.72rem;color:var(--text-secondary);font-weight:300" id="engineDesc">
+        Google Gemini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes.
       </div>
     </div>
     <div class="mcp-card" style="flex:1;min-height:0">
@@ -434,13 +434,19 @@ tools:
 <div class="modal-overlay" id="keyModal">
   <div class="modal">
     <h2>☕ Dublin Cafe AI</h2>
-    <p>Get a <strong>free Gemini API key</strong> to power the chatbot brain, or try the demo with our built-in dataset of 35+ real Dublin cafes.</p>
-    <input type="text" id="apiKeyInput" placeholder="Paste your Gemini API key..." autocomplete="off">
-    <div style="font-size:0.75rem;color:var(--muted);margin:-0.3rem 0 0.6rem">
-      Get one at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--green)">aistudio.google.com/apikey</a> — free, no card needed
+    <p>Connect your LLM to power the chatbot brain, or try the demo with our built-in dataset of 35+ real Dublin cafes.</p>
+
+    <div style="display:flex;gap:6px;margin-bottom:0.8rem">
+      <button class="btn" id="providerGemini" style="flex:1;background:var(--green);color:#fff;font-weight:600" onclick="selectProvider('gemini')">Google Gemini</button>
+      <button class="btn" id="providerOpenAI" style="flex:1;background:var(--border-light);color:var(--text-secondary);font-weight:400" onclick="selectProvider('openai')">OpenAI</button>
+    </div>
+
+    <input type="text" id="apiKeyInput" placeholder="Paste your API key..." autocomplete="off">
+    <div id="keyHelp" style="font-size:0.75rem;color:var(--muted);margin:-0.3rem 0 0.6rem">
+      Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--green)">aistudio.google.com/apikey</a>
     </div>
     <div class="modal-actions">
-      <button class="btn primary" onclick="setApiKey()">Connect Gemini</button>
+      <button class="btn primary" onclick="setApiKey()" id="connectBtn">Connect</button>
       <button class="btn sec" onclick="startDemo()">Start Demo (offline)</button>
     </div>
     <div class="note" style="margin-top:0.8rem;padding:0.6rem;background:rgba(45,90,59,0.04);border-radius:6px">
@@ -496,8 +502,12 @@ const DUBLIN_CAFES = [
 // STATE
 // ============================================================
 let apiKey = '';
-const STORAGE_KEY = 'dublin-cafe-gemini-key';
-const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+let apiType = 'gemini'; // 'gemini' or 'openai'
+const STORAGE_KEY = 'dublin-cafe-llm-key';
+const STORAGE_TYPE_KEY = 'dublin-cafe-llm-type';
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_MODEL = 'gpt-4o-mini';
 let history = [];
 let settings = { useDemo: false };
 
@@ -706,10 +716,11 @@ async function send() {
     if (window.demoMode) {
       await demoResponse(userMsg);
     } else if (apiKey) {
-      await geminiCall(userMsg);
+      if (apiType === 'openai') await openaiCall(userMsg);
+      else await geminiCall(userMsg);
     } else {
       removeThinking();
-      addMessage('bot', 'Please enter a Gemini API key or start Demo mode to use the chatbot.');
+      addMessage('bot', 'Please enter an API key or start Demo mode to use the chatbot.');
     }
   } catch (e) {
     removeThinking();
@@ -743,19 +754,19 @@ When you get cafe results from the tool, present them warmly. Mention the vibe, 
 
   for (let turn = 0; turn < maxTurns; turn++) {
     const body = { contents: currentContents, tools: [{ functionDeclarations: MCP_TOOLS }] };
-    const res = await fetch(`${API_ENDPOINT}?key=${apiKey}`, {
+    const res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || `API error ${res.status}`);
+      throw new Error(err.error?.message || `Gemini API error ${res.status}`);
     }
     const data = await res.json();
     const candidate = data.candidates?.[0];
-    if (!candidate) throw new Error('No response from model');
+    if (!candidate) throw new Error('No response from Gemini');
     const part = candidate.content?.parts?.[0];
-    if (!part) throw new Error('Empty response');
+    if (!part) throw new Error('Empty response from Gemini');
 
     if (part.functionCall) {
       const fc = part.functionCall;
@@ -782,7 +793,7 @@ When you get cafe results from the tool, present them warmly. Mention the vibe, 
   // Try to get final response if we only had function calls
   if (!finalText && toolCallsInMsg.length) {
     const body = { contents: currentContents, tools: [{ functionDeclarations: MCP_TOOLS }] };
-    const res = await fetch(`${API_ENDPOINT}?key=${apiKey}`, {
+    const res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
@@ -819,6 +830,107 @@ When you get cafe results from the tool, present them warmly. Mention the vibe, 
   addMessage('bot', displayHtml || 'Got it! Check the results above.');
   history.push({ role: 'user', text: userMsg });
   history.push({ role: 'model', text: finalText || '(tool results shown)' });
+  if (history.length > 20) history.splice(0, 2);
+}
+
+// ============================================================
+// OPENAI LLM CALL
+// ============================================================
+async function openaiCall(userMsg) {
+  let toolCallsInMsg = [];
+  const systemMsg = 'You are a Dublin cafe expert AI assistant with access to MCP tools that search a database of 35+ real Dublin cafes. Always be friendly, enthusiastic about Dublin\'s coffee scene, and knowledgeable. When you show cafes, format them beautifully. Use the word "we" as if you\'re a local Dubliner. If asked about areas, recommend specific cafes.\n\nThe MCP tools available are:\n- search_dublin_cafes(keyword): Search by area, vibe, keyword\n- get_cafe_details(name): Full details on a specific cafe\n- get_popular_areas(): List Dublin areas with cafe counts\n\nWhen you get cafe results from the tool, present them warmly. Mention the vibe, rating, and what makes each spot special. Never claim these are AI-generated — these are real Dublin cafes.';
+
+  const tools = MCP_TOOLS.map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } }));
+  let messages = [
+    { role: 'system', content: systemMsg },
+    ...history.map(m => ({ role: m.role, content: m.text })),
+    { role: 'user', content: userMsg }
+  ];
+
+  const maxTurns = 4;
+  let finalText = '';
+
+  for (let turn = 0; turn < maxTurns; turn++) {
+    const body = { model: OPENAI_MODEL, messages, tools, tool_choice: 'auto' };
+    const res = await fetch(OPENAI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `OpenAI API error ${res.status}`);
+    }
+    const data = await res.json();
+    const choice = data.choices?.[0];
+    if (!choice) throw new Error('No response from OpenAI');
+    const msg = choice.message;
+
+    if (msg.tool_calls?.length) {
+      for (const tc of msg.tool_calls) {
+        const name = tc.function.name;
+        const args = JSON.parse(tc.function.arguments || '{}');
+        const handler = MCP_HANDLERS[name];
+        if (!handler) throw new Error(`Unknown tool: ${name}`);
+        const result = await handler(args);
+        const cafes = result.cafes || (result.cafe ? [result.cafe] : []);
+        const areas = result.areas;
+        const info = areas ? `${areas.length} areas` : `${cafes.length} cafes found`;
+
+        addToolLog(name, args, info);
+        toolCallsInMsg.push({ name, args, result: info });
+
+        messages.push({ role: 'assistant', content: null, tool_calls: [tc] });
+        messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
+      }
+    } else if (msg.content) {
+      finalText = msg.content;
+      break;
+    } else {
+      break;
+    }
+  }
+
+  removeThinking();
+
+  // Get final response after tool calls if needed
+  if (!finalText && toolCallsInMsg.length) {
+    const body = { model: OPENAI_MODEL, messages, tools, tool_choice: 'auto' };
+    const res = await fetch(OPENAI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      finalText = data.choices?.[0]?.message?.content || '';
+    }
+  }
+
+  let displayHtml = finalText
+    ? finalText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>')
+    : '';
+
+  if (!displayHtml && toolCallsInMsg.length) {
+    const last = toolCallsInMsg[toolCallsInMsg.length - 1];
+    if (last.args?.keyword) {
+      const handler = MCP_HANDLERS[last.name];
+      if (handler) {
+        const result = await handler(last.args);
+        if (result.cafes?.length) displayHtml = cafesToBubble(result.cafes);
+        else if (result.cafe) displayHtml = cafeToHTML(result.cafe);
+        else if (result.areas) {
+          displayHtml = result.areas.map(a =>
+            `<div style="margin:0.2rem 0"><strong>${a.area}</strong> — ${a.cafeCount} cafes · Top: ${a.topCafes.join(', ')}</div>`
+          ).join('');
+        }
+      }
+    }
+  }
+
+  addMessage('bot', displayHtml || 'Got it! Check the results above.');
+  history.push({ role: 'user', content: userMsg });
+  history.push({ role: 'assistant', content: finalText || '(tool results shown)' });
   if (history.length > 20) history.splice(0, 2);
 }
 
@@ -937,25 +1049,49 @@ async function demoResponse(userMsg) {
 // ============================================================
 // API KEY / MODAL
 // ============================================================
+function selectProvider(type) {
+  apiType = type;
+  document.getElementById('providerGemini').style.background = type === 'gemini' ? 'var(--green)' : 'var(--border-light)';
+  document.getElementById('providerGemini').style.color = type === 'gemini' ? '#fff' : 'var(--text-secondary)';
+  document.getElementById('providerGemini').style.fontWeight = type === 'gemini' ? '600' : '400';
+  document.getElementById('providerOpenAI').style.background = type === 'openai' ? 'var(--green)' : 'var(--border-light)';
+  document.getElementById('providerOpenAI').style.color = type === 'openai' ? '#fff' : 'var(--text-secondary)';
+  document.getElementById('providerOpenAI').style.fontWeight = type === 'openai' ? '600' : '400';
+  const label = type === 'gemini' ? 'Gemini' : 'OpenAI';
+  document.getElementById('connectBtn').textContent = 'Connect ' + label;
+  const help = document.getElementById('keyHelp');
+  if (type === 'gemini') {
+    help.innerHTML = 'Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--green)">aistudio.google.com/apikey</a>';
+  } else {
+    help.innerHTML = 'Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--green)">platform.openai.com/api-keys</a>';
+  }
+}
+
 function setApiKey() {
   const key = document.getElementById('apiKeyInput').value.trim();
   if (!key) return;
   apiKey = key;
-  try { localStorage.setItem(STORAGE_KEY, key); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, key); localStorage.setItem(STORAGE_TYPE_KEY, apiType); } catch {}
   document.getElementById('keyModal').style.display = 'none';
   updateApiStatus(true);
-  addMessage('bot', '☕ Gemini connected! I have access to <strong>3 MCP tools</strong> with details on 35+ real Dublin cafes. Try: <em>"Find a cosy cafe in Dublin 2"</em> or <em>"Best brunch spots"</em>');
+  const label = apiType === 'gemini' ? 'Gemini' : 'OpenAI';
+  document.getElementById('engineLabel').textContent = apiType === 'gemini' ? 'Gemini 2.0 Flash' : 'GPT-4o-mini';
+  document.getElementById('engineDesc').textContent = apiType === 'gemini' ? 'Google Gemini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes.' : 'OpenAI GPT-4o-mini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes.';
+  addMessage('bot', `☕ ${label} connected! I have access to <strong>3 MCP tools</strong> with details on 35+ real Dublin cafes. Try: <em>"Find a cosy cafe in Dublin 2"</em> or <em>"Best brunch spots"</em>`);
 }
 
 function resetAndShowModal() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(STORAGE_TYPE_KEY); } catch {}
   apiKey = '';
+  apiType = 'gemini';
   window.demoMode = false;
   history = [];
   chatMessages.innerHTML = '';
   toolLog.innerHTML = '<div class="tl-item" style="color:var(--muted);font-size:0.6rem;justify-content:center;border:none;">No calls yet</div>';
   updateApiStatus(false, 'No LLM key');
   document.getElementById('engineLabel').textContent = 'Gemini 2.0 Flash';
+  document.getElementById('engineDesc').textContent = 'Google Gemini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes.';
+  selectProvider('gemini');
   document.getElementById('keyModal').style.display = 'flex';
 }
 
@@ -974,10 +1110,15 @@ function startDemo() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     apiKey = stored;
+    apiType = localStorage.getItem(STORAGE_TYPE_KEY) || 'gemini';
     document.getElementById('keyModal').style.display = 'none';
     updateApiStatus(true);
-    addMessage('bot', '☕ Welcome back! Gemini LLM is connected. Ask me about any cafe in Dublin — I know <strong>35+ real spots</strong>!');
+    const label = apiType === 'gemini' ? 'Gemini' : 'OpenAI';
+    document.getElementById('engineLabel').textContent = apiType === 'gemini' ? 'Gemini 2.0 Flash' : 'GPT-4o-mini';
+    document.getElementById('engineDesc').textContent = apiType === 'gemini' ? 'Google Gemini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes.' : 'OpenAI GPT-4o-mini decides when to invoke MCP tools. Powered by 35+ real Dublin cafes.';
+    addMessage('bot', `☕ Welcome back! ${label} LLM is connected. Ask me about any cafe in Dublin — I know <strong>35+ real spots</strong>!`);
   } else {
+    selectProvider('gemini');
     document.getElementById('keyModal').style.display = 'flex';
   }
 })();
